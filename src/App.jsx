@@ -1,14 +1,8 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 
-/* ═══════════════════════════════════════════
-   CONFIG — Finnhub.io
-   ═══════════════════════════════════════════ */
 const API_KEY = "d70v4chr01ql6rg0ov1gd70v4chr01ql6rg0ov20";
 const BASE = "https://finnhub.io/api/v1";
 
-/* ═══════════════════════════════════════════
-   POPULAR TICKERS (suggestions rapides)
-   ═══════════════════════════════════════════ */
 const POPULAR = [
   "AAPL","MSFT","GOOGL","AMZN","NVDA","META","TSLA","BRK-B","JPM","V",
   "JNJ","WMT","PG","MA","HD","KO","PEP","COST","NFLX","DIS",
@@ -19,923 +13,174 @@ const POPULAR = [
   "XOM","CVX","COP","SLB","EOG","MPC","PSX","VLO","OXY","DVN",
   "LMT","RTX","GD","NOC","GE","HON","CAT","DE","MMM","EMR",
   "SBUX","MCD","YUM","CMG","DPZ","WYNN","MAR","HLT","LVS","MGM",
-  "T","VZ","TMUS","CMCSA","CHTR","PARA","WBD","FOX","NWSA","EA",
-  "F","GM","TM","RIVN","LCID","NIO","XPEV","LI","RACE","STLA",
-  "SNOW","PLTR","CRWD","ZS","NET","DDOG","MDB","PANW","FTNT","OKTA",
-  "SHW","APD","ECL","DD","LIN","FCX","NEM","ALB","VALE","RIO",
-  "TSM","ASML","SAP","SNY","NVO","AZN","GSK","BTI","UL","DEO",
-  "WM","RSG","ODFL","UPS","FDX","DAL","UAL","LUV","AAL","JBLU",
+  "DUOL","EL","ABNB","COIN","SHOP","MELI","NU","SE","GRAB","BABA",
 ];
 
-/* ═══════════════════════════════════════════
-   COLORS & DESIGN SYSTEM
-   ═══════════════════════════════════════════ */
-const C = {
-  bg: "#05030e",
-  surface: "rgba(10,8,22,0.9)",
-  card: "rgba(14,11,28,0.92)",
-  border: "rgba(180,140,255,0.06)",
-  accent: "#b388ff",
-  accentDim: "rgba(179,136,255,0.12)",
-  accentGlow: "rgba(179,136,255,0.3)",
-  green: "#34d399",
-  greenDim: "rgba(52,211,153,0.1)",
-  red: "#f87171",
-  redDim: "rgba(248,113,113,0.1)",
-  text: "#ede8f5",
-  dim: "#5c5478",
-  mid: "#9990b3",
-  input: "rgba(8,5,18,0.85)",
-  inputBorder: "rgba(180,140,255,0.1)",
-  blue: "#818cf8",
+const GURUS = [
+  { name:"Warren Buffett", fund:"Berkshire Hathaway", value:"$298B", img:"\u{1F3DB}", holdings:["AAPL","BAC","AXP","KO","CVX","OXY","KHC","MCO","CB","DVA","AMZN","NU","ALLY","TMUS"] },
+  { name:"Bill Ackman", fund:"Pershing Square", value:"$13.7B", img:"\u{1F3AF}", holdings:["GOOGL","HLT","CMG","BN","NKE","UBER","CP","LOW","QSR","MNST"] },
+  { name:"Terry Smith", fund:"Fundsmith Equity", value:"$27B", img:"\u{1F1EC}\u{1F1E7}", holdings:["META","MSFT","V","IDXX","SPGI","EL","SYK","WAT","ADP","FICO"] },
+  { name:"Fran\u00e7ois Rochon", fund:"Giverny Capital", value:"$1.1B", img:"\u{1F341}", holdings:["BRK-B","GOOGL","META","V","MSFT","ADBE","FIVE","ROL","POOL","WSO","ORLY"] },
+  { name:"Michael Burry", fund:"Scion Asset Mgmt", value:"$240M", img:"\u{1F525}", holdings:["BABA","JD","ESTC","OSCR","BKNG","HCA","SATS"] },
+  { name:"Li Lu", fund:"Himalaya Capital", value:"$3.8B", img:"\u{1F3D4}", holdings:["BRK-A","GOOGL","MU","BABA","EWBC","BAM","APO"] },
+  { name:"Bill Gates", fund:"Gates Foundation", value:"$47B", img:"\u{1F4BB}", holdings:["MSFT","BRK-B","WM","CNI","CAT","ECL","SCHW","WMT","FDX"] },
+  { name:"Chuck Akre", fund:"Akre Capital", value:"$12B", img:"\u{1F985}", holdings:["AMZN","MA","MCO","ORLY","V","BRK-B","GOOGL","KKR","AMT"] },
+  { name:"Dev Kantesaria", fund:"Valley Forge Cap.", value:"$2.5B", img:"\u{1F3F0}", holdings:["V","MA","MSFT","IDXX","SPGI","MCO","ADBE","ROP","NOW"] },
+  { name:"Nick Sleep", fund:"Nomad (Legacy)", value:"Closed", img:"\u{1F4A4}", holdings:["AMZN","COST","BRK-A"] },
+  { name:"Mohnish Pabrai", fund:"Pabrai Funds", value:"$600M", img:"\u{1F1EE}\u{1F1F3}", holdings:["COAL INDIA","IIFL","RAIN","BABA","GOOGL","FIAT"] },
+  { name:"David Tepper", fund:"Appaloosa Mgmt", value:"$6.8B", img:"\u26A1", holdings:["NVDA","META","MSFT","AMZN","GOOGL","BABA","UBER","AMD","LLY"] },
+  { name:"Seth Klarman", fund:"Baupost Group", value:"$27B", img:"\u{1F4D5}", holdings:["LBTYA","LBTYK","QRVO","INTC","VSAT","FOXA","EBAY","WBD"] },
+  { name:"Guy Spier", fund:"Aquamarine Fund", value:"$300M", img:"\u{1F41F}", holdings:["BRK-B","GOOGL","MSFT","JNJ","AMZN","BAM"] },
+  { name:"Howard Marks", fund:"Oaktree Capital", value:"$170B AUM", img:"\u{1F4D8}", holdings:["Credit","Distressed Debt","Real Estate","Infra"] },
+];
+
+const TIPS = {
+  fcf: "Free Cash Flow par action : le cash r\u00e9ellement g\u00e9n\u00e9r\u00e9 par l'entreprise apr\u00e8s investissements, divis\u00e9 par le nombre d'actions. C'est le nerf de la valorisation DCF.",
+  netDebt: "Dette Nette par action : dette totale moins la tr\u00e9sorerie, ramen\u00e9e par action. N\u00e9gatif = l'entreprise a plus de cash que de dettes.",
+  wacc: "Weighted Average Cost of Capital : le taux de rendement minimum exig\u00e9 par les investisseurs. Plus il est \u00e9lev\u00e9, plus la fair value baisse.",
+  growth: "Taux de croissance annuel estim\u00e9 du FCF. Y1-5 = phase de croissance, Y6-10 = normalisation.",
+  terminal: "Croissance terminale : rythme perp\u00e9tuel apr\u00e8s 10 ans. Doit rester sous le WACC. Typiquement 2-4%.",
+  dilution: "Taux annuel de dilution (+) ou rachat (-) d'actions. Rachat = FCF/action augmente.",
+  margin: "Marge de s\u00e9curit\u00e9 : d\u00e9cote sur la fair value. Benjamin Graham recommandait 25-30%.",
+  pe: "Price/Earnings : combien le march\u00e9 paie pour 1$ de b\u00e9n\u00e9fice.",
+  pb: "Price/Book : ratio prix / valeur comptable. Sous 1 = d\u00e9cote sur actifs nets.",
+  roic: "Return on Invested Capital : rentabilit\u00e9 des capitaux investis. Au-dessus de 15% = excellent.",
+  divYield: "Rendement du dividende annuel rapport\u00e9 au prix de l'action.",
+  revPS: "Revenue per Share : chiffre d'affaires divis\u00e9 par le nombre d'actions.",
 };
 
-const ff = `'Outfit', 'Space Grotesk', system-ui, sans-serif`;
-const mono = `'JetBrains Mono', 'Fira Code', monospace`;
+const C = {
+  bg:"#05030e", card:"rgba(14,11,28,0.92)", border:"rgba(180,140,255,0.06)",
+  accent:"#b388ff", accentDim:"rgba(179,136,255,0.12)", accentGlow:"rgba(179,136,255,0.3)",
+  green:"#34d399", greenDim:"rgba(52,211,153,0.1)",
+  red:"#f87171", redDim:"rgba(248,113,113,0.1)",
+  text:"#ede8f5", dim:"#5c5478", mid:"#9990b3",
+  input:"rgba(8,5,18,0.85)", inputBorder:"rgba(180,140,255,0.1)", blue:"#818cf8",
+};
+const ff=`'Outfit',system-ui,sans-serif`, mono=`'JetBrains Mono','Fira Code',monospace`;
 
-/* ═══════════════════════════════════════════
-   API FUNCTIONS — Finnhub.io
-   ═══════════════════════════════════════════ */
-async function apiFetch(url) {
-  try {
-    const r = await fetch(url);
-    if (!r.ok) return null;
-    const d = await r.json();
-    if (d?.error) return null;
-    return d;
-  } catch { return null; }
-}
+async function apiFetch(u){try{const r=await fetch(u);if(!r.ok)return null;const d=await r.json();if(d?.error)return null;return d;}catch{return null;}}
+async function searchTickers(q){const d=await apiFetch(`${BASE}/search?q=${q}&token=${API_KEY}`);if(!d?.result)return[];return d.result.filter(r=>r.type==="Common Stock"||r.type==="ADR"||r.type==="EQS").slice(0,8).map(r=>({symbol:r.symbol,name:r.description||""}));}
+async function fetchConsensus(tk){const[rec,tgt]=await Promise.all([apiFetch(`${BASE}/stock/recommendation?symbol=${tk}&token=${API_KEY}`),apiFetch(`${BASE}/stock/price-target?symbol=${tk}&token=${API_KEY}`)]);return{rec:rec?.[0]||null,tgt:tgt||null};}
+async function loadTicker(tk){const[q,p,f]=await Promise.all([apiFetch(`${BASE}/quote?symbol=${tk}&token=${API_KEY}`),apiFetch(`${BASE}/stock/profile2?symbol=${tk}&token=${API_KEY}`),apiFetch(`${BASE}/stock/metric?symbol=${tk}&metric=all&token=${API_KEY}`)]);if(!q?.c)return null;const m=f?.metric||{};const mc=(p?.marketCapitalization||0)*1e6;const sh=p?.shareOutstanding?p.shareOutstanding*1e6:null;let fcf=m.freeCashFlowPerShareTTM??m.freeCashFlowPerShareAnnual??null;let nd=null;if(m.netDebtAnnual!=null&&sh)nd=(m.netDebtAnnual*1e6)/sh;return{ticker:tk.toUpperCase(),name:p?.name||tk,currency:p?.currency||"USD",price:q.c,sector:p?.finnhubIndustry||"\u2014",country:p?.country||"\u2014",exchange:p?.exchange||"\u2014",marketCap:mc,sharesOut:sh,fcfPS:fcf,netDebtPS:nd,roic:m.roiTTM!=null?m.roiTTM/100:null,pe:m.peTTM??m.peAnnual??null,pb:m.pbAnnual??null,divY:m.dividendYieldIndicatedAnnual!=null?m.dividendYieldIndicatedAnnual/100:null,revPS:m.revenuePerShareTTM??null,desc:p?.name?`${p.name} \u2014 ${p.finnhubIndustry||""}, ${p.country||""}. IPO: ${p.ipo||"\u2014"}.`:"",logo:p?.logo||null};}
 
-async function searchTickers(q) {
-  const d = await apiFetch(`${BASE}/search?q=${q}&token=${API_KEY}`);
-  if (!d?.result) return [];
-  return d.result
-    .filter(r => r.type === "Common Stock" || r.type === "ADR" || r.type === "EQS")
-    .slice(0, 8)
-    .map(r => ({ symbol: r.symbol, name: r.description || "" }));
-}
+function fmtP(n,c="USD"){if(n==null||isNaN(n))return"\u2014";return(c==="EUR"?"\u20AC":c==="GBP"?"\u00A3":"$")+Number(n).toFixed(2);}
+function fmtN(n){return n==null||isNaN(n)?"\u2014":Number(n).toFixed(2);}
+function fmtB(n){if(n==null)return"\u2014";const a=Math.abs(n);if(a>=1e12)return(n/1e12).toFixed(1)+"T";if(a>=1e9)return(n/1e9).toFixed(1)+"B";if(a>=1e6)return(n/1e6).toFixed(1)+"M";return n.toFixed(0);}
+function fmtPc(n){return n==null||isNaN(n)?"\u2014":(n*100).toFixed(1)+"%";}
+function dcf({fcfPS,netDebtPS,wacc,g1,g2,tg,dil,mg}){const w=wacc/100,a=g1/100,b=g2/100,t=tg/100,d=dil/100;const pr=[];let c=fcfPS;for(let y=1;y<=10;y++){const g=y<=5?a:b;c=c*(1+g)/(1+d);pr.push({year:y,fcf:c,disc:c/Math.pow(1+w,y),g});}const s=pr.reduce((x,p)=>x+p.disc,0);const tv=w>t?(c*(1+t))/(w-t):c*25;const dtv=tv/Math.pow(1+w,10);const fv=s+dtv-(netDebtPS||0);return{pr,s,tv,dtv,fv,sv:fv*(1-mg/100)};}
 
-async function loadTickerData(ticker) {
-  // 3 parallel calls: quote, profile, basic financials (117 metrics)
-  const [quote, profile, financials] = await Promise.all([
-    apiFetch(`${BASE}/quote?symbol=${ticker}&token=${API_KEY}`),
-    apiFetch(`${BASE}/stock/profile2?symbol=${ticker}&token=${API_KEY}`),
-    apiFetch(`${BASE}/stock/metric?symbol=${ticker}&metric=all&token=${API_KEY}`),
-  ]);
+function Star({size=24,color=C.accent}){return <svg width={size} height={size} viewBox="0 0 100 100" fill="none"><path d="M50 0 Q50.8 44 52 48 Q56 49.2 100 50 Q56 50.8 52 52 Q50.8 56 50 100 Q49.2 56 48 52 Q44 50.8 0 50 Q44 49.2 48 48 Q49.2 44 50 0Z" fill={color} opacity="0.85"/><path d="M50 15 Q50.4 46 51 49 Q54 49.6 85 50 Q54 50.4 51 51 Q50.4 54 50 85 Q49.6 54 49 51 Q46 50.4 15 50 Q46 49.6 49 49 Q49.6 46 50 15Z" fill={color} opacity="0.3"/><circle cx="50" cy="50" r="2.5" fill={color} opacity="0.7"/></svg>;}
 
-  // Need at least quote with a price
-  const price = quote?.c || profile?.marketCapitalization && null;
-  if (!price || price === 0) return null;
+function BG(){const ref=useRef(null);useEffect(()=>{if(!ref.current)return;const cv=ref.current,cx=cv.getContext("2d");let id;const rz=()=>{cv.width=window.innerWidth;cv.height=window.innerHeight;};rz();window.addEventListener("resize",rz);const st=Array.from({length:180},()=>({x:Math.random()*cv.width,y:Math.random()*cv.height,r:Math.random()*1.3+0.2,sp:Math.random()*0.12+0.02,ph:Math.random()*Math.PI*2,ps:Math.random()*0.008+0.003}));let sh=[];const dr=()=>{cx.clearRect(0,0,cv.width,cv.height);st.forEach(s=>{s.ph+=s.ps;s.y+=s.sp;if(s.y>cv.height){s.y=0;s.x=Math.random()*cv.width;}cx.beginPath();cx.arc(s.x,s.y,s.r,0,Math.PI*2);cx.fillStyle=`rgba(200,180,255,${0.3+Math.sin(s.ph)*0.4})`;cx.fill();});if(Math.random()<0.003&&sh.length<2)sh.push({x:Math.random()*cv.width,y:Math.random()*cv.height*0.4,vx:(Math.random()-0.3)*6,vy:Math.random()*3+2,l:1});sh=sh.filter(s=>{s.x+=s.vx;s.y+=s.vy;s.l-=0.015;if(s.l<=0)return false;cx.beginPath();cx.moveTo(s.x,s.y);cx.lineTo(s.x-s.vx*8,s.y-s.vy*8);cx.strokeStyle=`rgba(179,136,255,${s.l*0.6})`;cx.lineWidth=1.2;cx.stroke();return true;});id=requestAnimationFrame(dr);};dr();return()=>{cancelAnimationFrame(id);window.removeEventListener("resize",rz);};},[]);return <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none"}}><style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}@keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:.6}50%{opacity:1}}`}</style><canvas ref={ref} style={{position:"absolute",inset:0,width:"100%",height:"100%"}}/><div style={{position:"absolute",top:"0%",left:"5%",width:700,height:700,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(120,60,200,0.06) 0%,transparent 70%)",filter:"blur(80px)"}}/><div style={{position:"absolute",top:"40%",right:"0%",width:600,height:600,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(179,136,255,0.05) 0%,transparent 70%)",filter:"blur(100px)"}}/></div>;}
 
-  const m = financials?.metric || {};
-  const mktCap = (profile?.marketCapitalization || 0) * 1e6; // Finnhub returns in millions
-  const sharesOut = profile?.shareOutstanding ? profile.shareOutstanding * 1e6 : null;
+function Tip({text,children}){const[s,setS]=useState(false);return <span style={{position:"relative",cursor:"help",borderBottom:`1px dotted ${C.dim}`}} onMouseEnter={()=>setS(true)} onMouseLeave={()=>setS(false)} onClick={()=>setS(!s)}>{children}{s&&<div style={{position:"absolute",bottom:"calc(100% + 8px)",left:"50%",transform:"translateX(-50%)",width:280,background:"rgba(20,16,40,0.98)",border:`1px solid ${C.accent}33`,borderRadius:12,padding:"12px 16px",fontSize:12,color:C.text,lineHeight:1.5,zIndex:50,boxShadow:"0 8px 32px rgba(0,0,0,0.6)",fontFamily:ff,fontWeight:400,pointerEvents:"none"}}>{text}</div>}</span>;}
 
-  // FCF per share — Finnhub metric key: freeCashFlowPerShareTTM or freeCashFlowPerShareAnnual
-  let fcfPS = m.freeCashFlowPerShareTTM ?? m.freeCashFlowPerShareAnnual ?? null;
+function Inp({label,value,onChange,suffix,note,tip}){const[f,setF]=useState(false);return <div style={{flex:1,minWidth:120}}><label style={{fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5,display:"block",fontFamily:ff}}>{tip?<Tip text={tip}>{label} \u24D8</Tip>:label}</label><div style={{position:"relative"}}><input type="number" step="any" value={value} onChange={e=>onChange(e.target.value)} placeholder="0" style={{width:"100%",boxSizing:"border-box",background:C.input,border:`1.5px solid ${f?C.accent:C.inputBorder}`,borderRadius:10,color:C.text,fontSize:15,fontFamily:mono,padding:"11px 14px",paddingRight:suffix?44:14,outline:"none",transition:"all .25s",boxShadow:f?`0 0 0 3px ${C.accentDim}`:"none"}} onFocus={()=>setF(true)} onBlur={()=>setF(false)}/>{suffix&&<span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:11,fontFamily:mono,fontWeight:600}}>{suffix}</span>}</div>{note&&<div style={{fontSize:10,color:C.dim,marginTop:3}}>{note}</div>}</div>;}
 
-  // Net debt per share — compute from metrics if available
-  // Finnhub provides: netDebtAnnual, currentDebt, totalDebt, cashAndShortTermInvestments
-  let netDebtPS = null;
-  if (m.netDebtAnnual != null && sharesOut) {
-    netDebtPS = (m.netDebtAnnual * 1e6) / sharesOut;
-  } else if (m.totalDebtToEquityAnnual != null && m.bookValuePerShareAnnual != null) {
-    // Rough approximation: netDebt ≈ totalDebt - cash, but use what's available
-    const longTermDebt = m.longTermDebtToEquityAnnual || 0;
-    const bvps = m.bookValuePerShareAnnual || 0;
-    if (m.currentRatioAnnual && bvps) {
-      netDebtPS = null; // better to leave null than give wrong number
-    }
-  }
+function Crd({children,style:s,glow,anim,delay}){return <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"22px 24px",marginBottom:16,backdropFilter:"blur(20px)",boxShadow:glow?`0 0 50px ${C.accentDim}`:"0 2px 16px rgba(0,0,0,.3)",animation:anim?`slideUp .6s ease-out ${delay||"0s"} both`:"none",...s}}>{children}</div>;}
+function Tag({children,color}){return <span style={{fontSize:10,fontWeight:600,padding:"3px 10px",borderRadius:6,background:color==="green"?C.greenDim:color==="red"?C.redDim:color==="blue"?"rgba(129,140,248,.1)":C.accentDim,color:color==="green"?C.green:color==="red"?C.red:color==="blue"?C.blue:C.accent,fontFamily:ff}}>{children}</span>;}
+function Pill({label,value,color}){const bg=color==="green"?C.greenDim:color==="red"?C.redDim:C.accentDim;const fg=color==="green"?C.green:color==="red"?C.red:C.accent;return <div style={{background:bg,border:`1px solid ${fg}22`,borderRadius:12,padding:"12px 18px",flex:1,minWidth:100}}><div style={{fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:3,fontFamily:ff}}>{label}</div><div style={{fontSize:18,fontWeight:700,fontFamily:mono,color:fg}}>{value}</div></div>;}
 
-  return {
-    ticker: ticker.toUpperCase(),
-    name: profile?.name || ticker,
-    currency: profile?.currency || "USD",
-    price: quote?.c || null,
-    sector: profile?.finnhubIndustry || "—",
-    industry: profile?.finnhubIndustry || "—",
-    country: profile?.country || "—",
-    exchange: profile?.exchange || "—",
-    marketCap: mktCap || null,
-    sharesOut,
-    fcfPS,
-    netDebtPS,
-    roic: m.roiTTM != null ? m.roiTTM / 100 : null,
-    peRatio: m.peTTM ?? m.peAnnual ?? null,
-    pbRatio: m.pbAnnual ?? m.pbQuarterly ?? null,
-    dividendYield: m.dividendYieldIndicatedAnnual != null ? m.dividendYieldIndicatedAnnual / 100 : null,
-    revenuePS: m.revenuePerShareTTM ?? m.revenuePerShareAnnual ?? null,
-    description: profile?.name ? `${profile.name} — ${profile.finnhubIndustry || ""}, ${profile.country || ""}. IPO: ${profile.ipo || "—"}.` : "",
-    image: profile?.logo || null,
-  };
-}
+function ConsBar({rec,tgt}){if(!rec&&!tgt)return null;const tot=rec?(rec.strongBuy||0)+(rec.buy||0)+(rec.hold||0)+(rec.sell||0)+(rec.strongSell||0):0;return <Crd anim delay="0.05s"><div style={{fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:14}}>Consensus Analystes</div>{rec&&tot>0&&<div><div style={{display:"flex",gap:2,height:8,borderRadius:4,overflow:"hidden",marginBottom:10}}>{[{v:rec.strongBuy,c:"#22c55e"},{v:rec.buy,c:"#4ade80"},{v:rec.hold,c:"#fbbf24"},{v:rec.sell,c:"#f87171"},{v:rec.strongSell,c:"#dc2626"}].map((x,i)=>x.v>0?<div key={i} style={{flex:x.v,background:x.c}}/>:null)}</div><div style={{display:"flex",justifyContent:"space-between",fontSize:11,fontFamily:mono}}><span style={{color:C.green}}>Strong Buy {rec.strongBuy}</span><span style={{color:"#4ade80"}}>Buy {rec.buy}</span><span style={{color:"#fbbf24"}}>Hold {rec.hold}</span><span style={{color:C.red}}>Sell {rec.sell}</span><span style={{color:"#dc2626"}}>S.Sell {rec.strongSell}</span></div></div>}{tgt?.targetMean&&<div style={{display:"flex",gap:12,marginTop:14,flexWrap:"wrap"}}>{[{l:"Target Bas",v:fmtP(tgt.targetLow),c:C.red},{l:"Target Moyen",v:fmtP(tgt.targetMean),c:C.accent},{l:"Target Haut",v:fmtP(tgt.targetHigh),c:C.green}].map(t=><div key={t.l} style={{background:C.input,borderRadius:10,padding:"10px 16px",border:`1px solid ${C.inputBorder}`,flex:1,minWidth:80,textAlign:"center"}}><div style={{fontSize:9,color:C.dim,textTransform:"uppercase"}}>{t.l}</div><div style={{fontSize:16,fontWeight:700,fontFamily:mono,color:t.c,marginTop:2}}>{t.v}</div></div>)}</div>}</Crd>;}
 
-/* ═══════════════════════════════════════════
-   HELPERS
-   ═══════════════════════════════════════════ */
-function fmtP(n, c = "USD") {
-  if (n == null || isNaN(n)) return "—";
-  const s = c === "EUR" ? "€" : c === "GBP" ? "£" : c === "JPY" ? "¥" : c === "CHF" ? "CHF " : "$";
-  return s + Number(n).toFixed(2);
-}
-function fmtN(n) { return n == null || isNaN(n) ? "—" : Number(n).toFixed(2); }
-function fmtBig(n) {
-  if (n == null) return "—";
-  const a = Math.abs(n);
-  if (a >= 1e12) return (n/1e12).toFixed(1) + "T";
-  if (a >= 1e9) return (n/1e9).toFixed(1) + "B";
-  if (a >= 1e6) return (n/1e6).toFixed(1) + "M";
-  return n.toFixed(0);
-}
-function fmtPct(n) { return n == null || isNaN(n) ? "—" : (n * 100).toFixed(1) + "%"; }
+const PG={HOME:0,ANA:1,RES:2,WL:3,GU:4,ABT:5};
 
-/* ═══════════════════════════════════════════
-   DCF COMPUTE (per share)
-   ═══════════════════════════════════════════ */
-function computeDCF({ fcfPS, netDebtPS, wacc, g1, g2, tg, dilution, margin }) {
-  const w = wacc / 100, gr1 = g1 / 100, gr2 = g2 / 100, tgr = tg / 100, dil = dilution / 100;
-  const projections = [];
-  let cur = fcfPS;
-  for (let y = 1; y <= 10; y++) {
-    const gRate = y <= 5 ? gr1 : gr2;
-    cur = cur * (1 + gRate) / (1 + dil);
-    const disc = cur / Math.pow(1 + w, y);
-    projections.push({ year: y, fcfPS: cur, discounted: disc, gRate });
-  }
-  const sumDCF = projections.reduce((s, p) => s + p.discounted, 0);
-  const termFCF = cur * (1 + tgr);
-  const tv = w > tgr ? termFCF / (w - tgr) : cur * 25;
-  const discTV = tv / Math.pow(1 + w, 10);
-  const fairValue = sumDCF + discTV - (netDebtPS || 0);
-  const safeValue = fairValue * (1 - margin / 100);
-  return { projections, sumDCF, tv, discTV, fairValue, safeValue };
-}
+export default function App(){
+  const[page,setPage]=useState(PG.HOME);const[query,setQuery]=useState("");const[sugg,setSugg]=useState([]);const[showS,setShowS]=useState(false);const[loading,setLoading]=useState(false);const[err,setErr]=useState("");const[data,setData]=useState(null);const[cons,setCons]=useState({rec:null,tgt:null});const[price,setPrice]=useState("");const[fcfPS,setFcfPS]=useState("");const[ndPS,setNdPS]=useState("");const[cur,setCur]=useState("USD");const[wacc,setWacc]=useState("10");const[g1,setG1]=useState("8");const[g2,setG2]=useState("5");const[tg,setTg]=useState("2.5");const[dil,setDil]=useState("0");const[mg,setMg]=useState("25");const[res,setRes]=useState(null);const[showT,setShowT]=useState(false);
+  const[wl,setWl]=useState(()=>{try{return JSON.parse(localStorage.getItem("fh_wl"))||[];}catch{return[];}});
+  const[cMsg,setCMsg]=useState("");const[cSent,setCSent]=useState(false);const[gS,setGS]=useState("");
+  const sRef=useRef(null);
+  useEffect(()=>{try{localStorage.setItem("fh_wl",JSON.stringify(wl));}catch{}},[wl]);
+  useEffect(()=>{if(!query.trim()){setSugg([]);return;}const q=query.toUpperCase().trim();const l=POPULAR.filter(t=>t.startsWith(q)).slice(0,6).map(t=>({symbol:t,name:""}));setSugg(l);clearTimeout(sRef.current);if(query.length>=2)sRef.current=setTimeout(async()=>{const a=await searchTickers(q);if(a?.length){const m=[...l];a.forEach(r=>{if(!m.find(x=>x.symbol===r.symbol))m.push(r);});setSugg(m.slice(0,8));}},300);},[query]);
 
-/* ═══════════════════════════════════════════
-   COMPONENTS
-   ═══════════════════════════════════════════ */
-function Star({ size = 24, color = C.accent }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Ultra-fine 4-point star with ornate wisps */}
-      <path d="M50 0 Q50.8 44 52 48 Q56 49.2 100 50 Q56 50.8 52 52 Q50.8 56 50 100 Q49.2 56 48 52 Q44 50.8 0 50 Q44 49.2 48 48 Q49.2 44 50 0Z" fill={color} opacity="0.85"/>
-      {/* Inner glow */}
-      <path d="M50 15 Q50.4 46 51 49 Q54 49.6 85 50 Q54 50.4 51 51 Q50.4 54 50 85 Q49.6 54 49 51 Q46 50.4 15 50 Q46 49.6 49 49 Q49.6 46 50 15Z" fill={color} opacity="0.3"/>
-      {/* Diagonal fine wisps */}
-      <line x1="26" y1="26" x2="42" y2="42" stroke={color} strokeWidth="0.5" opacity="0.35"/>
-      <line x1="58" y1="58" x2="74" y2="74" stroke={color} strokeWidth="0.5" opacity="0.35"/>
-      <line x1="74" y1="26" x2="58" y2="42" stroke={color} strokeWidth="0.5" opacity="0.35"/>
-      <line x1="26" y1="74" x2="42" y2="58" stroke={color} strokeWidth="0.5" opacity="0.35"/>
-      {/* Micro center */}
-      <circle cx="50" cy="50" r="2.5" fill={color} opacity="0.7"/>
-      <circle cx="50" cy="50" r="5" fill="none" stroke={color} strokeWidth="0.3" opacity="0.25"/>
-    </svg>
-  );
-}
+  const load=useCallback(async(tk)=>{const t=(tk||query).trim().toUpperCase();if(!t)return;setLoading(true);setErr("");setQuery(t);setShowS(false);setCons({rec:null,tgt:null});const[r,cn]=await Promise.all([loadTicker(t),fetchConsensus(t)]);if(r){setData(r);setCur(r.currency||"USD");setPrice(String(r.price||""));setFcfPS(r.fcfPS!=null?String(Number(r.fcfPS).toFixed(2)):"");setNdPS(r.netDebtPS!=null?String(Number(r.netDebtPS).toFixed(2)):"");setRes(null);setCons(cn||{rec:null,tgt:null});setPage(PG.ANA);if(r.fcfPS==null||r.netDebtPS==null)setErr("Certaines donn\u00e9es manquent \u2014 compl\u00e9tez manuellement.");}else{setData({ticker:t,name:t,currency:"USD",price:null,sector:"\u2014",country:"\u2014",exchange:"\u2014",marketCap:null,sharesOut:null,fcfPS:null,netDebtPS:null,roic:null,pe:null,pb:null,divY:null,revPS:null,desc:"",logo:null});setCur("USD");setPrice("");setFcfPS("");setNdPS("");setRes(null);setPage(PG.ANA);setErr("API indisponible \u2014 renseignez manuellement.");}setLoading(false);},[query]);
 
-function AnimBG() {
-  const starsRef = useRef(null);
-  useEffect(() => {
-    if (!starsRef.current) return;
-    const canvas = starsRef.current;
-    const ctx = canvas.getContext("2d");
-    let animId;
-    const resize = () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; };
-    resize();
-    window.addEventListener("resize", resize);
+  const calc=useCallback(()=>{const f=parseFloat(fcfPS),w=parseFloat(wacc);if(!f||!w){setErr("FCF/share et WACC requis.");return;}setErr("");setRes(dcf({fcfPS:f,netDebtPS:parseFloat(ndPS)||0,wacc:w,g1:parseFloat(g1),g2:parseFloat(g2),tg:parseFloat(tg),dil:parseFloat(dil)||0,mg:parseFloat(mg)||0}));setShowT(true);setPage(PG.RES);},[fcfPS,ndPS,wacc,g1,g2,tg,dil,mg]);
 
-    // Generate stars
-    const stars = Array.from({ length: 220 }, () => ({
-      x: Math.random() * canvas.width,
-      y: Math.random() * canvas.height,
-      r: Math.random() * 1.4 + 0.2,
-      speed: Math.random() * 0.15 + 0.02,
-      pulse: Math.random() * Math.PI * 2,
-      pulseSpeed: Math.random() * 0.01 + 0.003,
-    }));
+  const addWl=()=>{if(!data||wl.find(w=>w.ticker===data.ticker))return;setWl(p=>[...p,{ticker:data.ticker,name:data.name,price:data.price,currency:data.currency,date:new Date().toLocaleDateString()}]);};
+  const rmWl=(tk)=>setWl(p=>p.filter(w=>w.ticker!==tk));
+  const reset=()=>{setQuery("");setData(null);setPrice("");setFcfPS("");setNdPS("");setRes(null);setShowT(false);setErr("");setCons({rec:null,tgt:null});setPage(PG.HOME);};
+  const up=res&&price?((res.fv-parseFloat(price))/parseFloat(price)*100):null;
+  const su=res&&price?((res.sv-parseFloat(price))/parseFloat(price)*100):null;
+  const inWl=data&&wl.find(w=>w.ticker===data.ticker);
+  const navs=[{l:"Analyse",p:PG.HOME,i:"\u2726"},{l:"Watchlist",p:PG.WL,i:"\u2605"},{l:"Investisseurs",p:PG.GU,i:"\uD83D\uDC51"},{l:"\u00C0 propos",p:PG.ABT,i:"\u2139"}];
 
-    // Shooting stars
-    let shooters = [];
-    const maybeShoot = () => {
-      if (Math.random() < 0.003 && shooters.length < 2) {
-        shooters.push({
-          x: Math.random() * canvas.width,
-          y: Math.random() * canvas.height * 0.4,
-          vx: (Math.random() - 0.3) * 6,
-          vy: Math.random() * 3 + 2,
-          life: 1,
-        });
-      }
-    };
+  return <div style={{minHeight:"100vh",background:C.bg,fontFamily:ff,color:C.text}}>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+    <BG/>
+    <div style={{position:"relative",zIndex:1}}>
 
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Stars
-      stars.forEach(s => {
-        s.pulse += s.pulseSpeed;
-        s.y += s.speed;
-        if (s.y > canvas.height) { s.y = 0; s.x = Math.random() * canvas.width; }
-        const opacity = 0.3 + Math.sin(s.pulse) * 0.4;
-        ctx.beginPath();
-        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(200,180,255,${opacity})`;
-        ctx.fill();
-      });
-
-      // Shooting stars
-      maybeShoot();
-      shooters = shooters.filter(s => {
-        s.x += s.vx; s.y += s.vy; s.life -= 0.015;
-        if (s.life <= 0) return false;
-        ctx.beginPath();
-        ctx.moveTo(s.x, s.y);
-        ctx.lineTo(s.x - s.vx * 8, s.y - s.vy * 8);
-        ctx.strokeStyle = `rgba(179,136,255,${s.life * 0.6})`;
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
-        return true;
-      });
-
-      animId = requestAnimationFrame(draw);
-    };
-    draw();
-    return () => { cancelAnimationFrame(animId); window.removeEventListener("resize", resize); };
-  }, []);
-
-  return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 0, overflow: "hidden", pointerEvents: "none" }}>
-      <style>{`
-        @keyframes neb1{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}25%{transform:translate(80px,-100px) scale(1.2) rotate(5deg)}50%{transform:translate(-60px,80px) scale(0.8) rotate(-3deg)}75%{transform:translate(100px,30px) scale(1.1) rotate(2deg)}}
-        @keyframes neb2{0%,100%{transform:translate(0,0) scale(1) rotate(0deg)}33%{transform:translate(-100px,60px) scale(1.3) rotate(-4deg)}66%{transform:translate(70px,-80px) scale(0.9) rotate(6deg)}}
-        @keyframes neb3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,80px) scale(1.15)}}
-        @keyframes fadeIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes slideUp{from{opacity:0;transform:translateY(30px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes pulse{0%,100%{opacity:0.6}50%{opacity:1}}
-        @keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
-      `}</style>
-      {/* Canvas for stars */}
-      <canvas ref={starsRef} style={{ position:"absolute", inset:0, width:"100%", height:"100%" }} />
-      {/* Nebulae */}
-      <div style={{ position:"absolute",top:"0%",left:"5%",width:700,height:700,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(120,60,200,0.06) 0%,rgba(80,40,180,0.02) 40%,transparent 70%)",animation:"neb1 35s ease-in-out infinite",filter:"blur(80px)" }}/>
-      <div style={{ position:"absolute",top:"40%",right:"0%",width:600,height:600,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(179,136,255,0.05) 0%,rgba(100,60,220,0.02) 40%,transparent 70%)",animation:"neb2 28s ease-in-out infinite",filter:"blur(100px)" }}/>
-      <div style={{ position:"absolute",bottom:"0%",left:"20%",width:800,height:800,borderRadius:"50%",background:"radial-gradient(ellipse,rgba(60,20,120,0.06) 0%,rgba(40,10,80,0.02) 40%,transparent 60%)",animation:"neb3 24s ease-in-out infinite",filter:"blur(120px)" }}/>
-      {/* Subtle purple haze at top */}
-      <div style={{ position:"absolute",top:0,left:0,right:0,height:"40%",background:"linear-gradient(180deg,rgba(100,50,180,0.04) 0%,transparent 100%)" }}/>
-    </div>
-  );
-}
-
-function Input({ label, value, onChange, suffix, note, wide }) {
-  const [f, setF] = useState(false);
-  return (
-    <div style={{ flex: wide ? 2 : 1, minWidth: wide ? 200 : 120 }}>
-      <label style={{ fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5,display:"block",fontFamily:ff }}>{label}</label>
-      <div style={{ position:"relative" }}>
-        <input type="number" step="any" value={value} onChange={e => onChange(e.target.value)} placeholder="0"
-          style={{ width:"100%",boxSizing:"border-box",background:C.input,border:`1.5px solid ${f?C.accent:C.inputBorder}`,borderRadius:10,color:C.text,fontSize:15,fontFamily:mono,padding:"11px 14px",paddingRight:suffix?44:14,outline:"none",transition:"all 0.25s",boxShadow:f?`0 0 0 3px ${C.accentDim}`:"none" }}
-          onFocus={()=>setF(true)} onBlur={()=>setF(false)} />
-        {suffix && <span style={{ position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:11,fontFamily:mono,fontWeight:600 }}>{suffix}</span>}
+    {/* HEADER */}
+    <div style={{borderBottom:`1px solid ${C.border}`,padding:"14px 24px",display:"flex",alignItems:"center",justifyContent:"space-between",backdropFilter:"blur(24px)",background:"rgba(5,3,14,0.75)",position:"sticky",top:0,zIndex:20}}>
+      <div style={{display:"flex",alignItems:"center",gap:10,cursor:"pointer"}} onClick={reset}>
+        <div style={{width:36,height:36,borderRadius:11,background:`linear-gradient(135deg,${C.accent},#7c3aed)`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 4px 18px ${C.accentDim}`}}><Star size={22} color="#05030e"/></div>
+        <div><div style={{fontSize:16,fontWeight:700,letterSpacing:"-.03em"}}>Finheist</div><div style={{fontSize:8,color:C.dim,letterSpacing:".1em",textTransform:"uppercase"}}>Intrinsic Value Engine</div></div>
       </div>
-      {note && <div style={{ fontSize:10,color:C.dim,marginTop:3 }}>{note}</div>}
+      <div style={{display:"flex",gap:4}}>{navs.map(n=><button key={n.l} onClick={()=>{if(n.p===PG.HOME)reset();else setPage(n.p);}} style={{background:page===n.p||(page===PG.ANA||page===PG.RES)&&n.p===PG.HOME?C.accentDim:"transparent",border:`1px solid ${page===n.p?C.accent+"33":"transparent"}`,borderRadius:10,padding:"7px 14px",color:page===n.p?C.accent:C.dim,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:ff,transition:"all .2s",display:"flex",alignItems:"center",gap:4}}><span style={{fontSize:12}}>{n.i}</span>{n.l}</button>)}</div>
+      {data&&(page===PG.ANA||page===PG.RES)&&<div style={{textAlign:"right"}}><div style={{fontSize:13,fontWeight:700}}>{data.name?.substring(0,22)}</div><div style={{fontSize:10,color:C.accent,fontFamily:mono}}>{data.ticker}</div></div>}
     </div>
-  );
-}
 
-function Card({ children, style: s, glow, anim, delay }) {
-  return (
-    <div style={{
-      background:C.card, border:`1px solid ${C.border}`, borderRadius:16,
-      padding:"22px 24px", marginBottom:16, backdropFilter:"blur(20px)",
-      boxShadow: glow ? `0 0 50px ${C.accentDim}` : "0 2px 16px rgba(0,0,0,0.3)",
-      animation: anim ? `slideUp 0.6s ease-out ${delay||"0s"} both` : "none",
-      ...s
-    }}>{children}</div>
-  );
-}
+    <div style={{maxWidth:720,margin:"0 auto",padding:"28px 20px 80px"}}>
 
-function Tag({ children, color }) {
-  return (
-    <span style={{
-      fontSize:10, fontWeight:600, padding:"3px 10px", borderRadius:6,
-      background: color === "green" ? C.greenDim : color === "red" ? C.redDim : color === "blue" ? "rgba(96,165,250,0.1)" : C.accentDim,
-      color: color === "green" ? C.green : color === "red" ? C.red : color === "blue" ? C.blue : C.accent,
-      fontFamily:ff, letterSpacing:"0.03em",
-    }}>{children}</span>
-  );
-}
-
-function Pill({ label, value, color, small }) {
-  const bg = color==="green"?C.greenDim:color==="red"?C.redDim:C.accentDim;
-  const fg = color==="green"?C.green:color==="red"?C.red:C.accent;
-  return (
-    <div style={{ background:bg,border:`1px solid ${fg}22`,borderRadius:12,padding:small?"10px 14px":"14px 20px",flex:1,minWidth:small?90:110 }}>
-      <div style={{ fontSize:9,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:3,fontFamily:ff }}>{label}</div>
-      <div style={{ fontSize:small?16:20,fontWeight:700,fontFamily:mono,color:fg }}>{value}</div>
-    </div>
-  );
-}
-
-/* ═══════════════════════════════════════════
-   PAGES
-   ═══════════════════════════════════════════ */
-const PAGE = { HOME: 0, ANALYSIS: 1, RESULTS: 2 };
-
-/* ═══════════════════════════════════════════
-   MAIN APP
-   ═══════════════════════════════════════════ */
-export default function DCFApp() {
-  const [page, setPage] = useState(PAGE.HOME);
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState([]);
-  const [showSugg, setShowSugg] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [data, setData] = useState(null);
-
-  // Per share inputs
-  const [price, setPrice] = useState("");
-  const [fcfPS, setFcfPS] = useState("");
-  const [netDebtPS, setNetDebtPS] = useState("");
-  const [currency, setCurrency] = useState("USD");
-
-  // DCF params
-  const [wacc, setWacc] = useState("10");
-  const [g1, setG1] = useState("8");
-  const [g2, setG2] = useState("5");
-  const [tg, setTg] = useState("2.5");
-  const [dilution, setDilution] = useState("0");
-  const [margin, setMargin] = useState("25");
-
-  // Results
-  const [results, setResults] = useState(null);
-  const [showTable, setShowTable] = useState(false);
-
-  const searchTimeout = useRef(null);
-
-  // Search suggestions
-  useEffect(() => {
-    if (!query.trim() || query.length < 1) { setSuggestions([]); return; }
-    const q = query.toUpperCase().trim();
-    // Filter popular first
-    const local = POPULAR.filter(t => t.startsWith(q)).slice(0, 6);
-    setSuggestions(local.map(t => ({ symbol: t, name: "" })));
-
-    // Then search API if less results
-    clearTimeout(searchTimeout.current);
-    if (query.length >= 2) {
-      searchTimeout.current = setTimeout(async () => {
-        const apiResults = await searchTickers(q);
-        if (apiResults?.length) {
-          const merged = [...local.map(t => ({ symbol: t, name: "" }))];
-          apiResults.forEach(r => {
-            if (!merged.find(m => m.symbol === r.symbol)) {
-              merged.push({ symbol: r.symbol, name: r.name || "" });
-            }
-          });
-          setSuggestions(merged.slice(0, 8));
-        }
-      }, 300);
-    }
-  }, [query]);
-
-  const handleLoad = useCallback(async (ticker) => {
-    const tk = (ticker || query).trim().toUpperCase();
-    if (!tk) return;
-    setLoading(true);
-    setError("");
-    setQuery(tk);
-    setShowSugg(false);
-
-    const result = await loadTickerData(tk);
-    if (result) {
-      setData(result);
-      setCurrency(result.currency || "USD");
-      setPrice(String(result.price || ""));
-      setFcfPS(result.fcfPS != null ? String(Number(result.fcfPS).toFixed(2)) : "");
-      setNetDebtPS(result.netDebtPS != null ? String(Number(result.netDebtPS).toFixed(2)) : "");
-      setResults(null);
-      setPage(PAGE.ANALYSIS);
-      // Warn if some data is missing
-      if (result.fcfPS == null || result.netDebtPS == null) {
-        setError("Certaines données manquent — complétez manuellement les champs vides.");
-      }
-    } else {
-      // Fallback: open analysis page in full manual mode
-      setData({
-        ticker: tk, name: tk, currency: "USD", price: null,
-        sector: "—", industry: "—", country: "—", exchange: "—",
-        marketCap: null, sharesOut: null, fcfPS: null, netDebtPS: null,
-        roic: null, peRatio: null, pbRatio: null, dividendYield: null,
-        revenuePS: null, description: "", image: null,
-      });
-      setCurrency("USD");
-      setPrice(""); setFcfPS(""); setNetDebtPS("");
-      setResults(null);
-      setPage(PAGE.ANALYSIS);
-      setError("API indisponible pour ce ticker — renseignez les données manuellement.");
-    }
-    setLoading(false);
-  }, [query]);
-
-  const handleCalculate = useCallback(() => {
-    const f = parseFloat(fcfPS), w = parseFloat(wacc);
-    if (!f || !w) { setError("FCF/share et WACC sont requis."); return; }
-    setError("");
-    const r = computeDCF({
-      fcfPS: f, netDebtPS: parseFloat(netDebtPS) || 0,
-      wacc: w, g1: parseFloat(g1), g2: parseFloat(g2),
-      tg: parseFloat(tg), dilution: parseFloat(dilution) || 0, margin: parseFloat(margin) || 0,
-    });
-    setResults(r);
-    setShowTable(true);
-    setPage(PAGE.RESULTS);
-  }, [fcfPS, netDebtPS, wacc, g1, g2, tg, dilution, margin]);
-
-  const handleReset = () => {
-    setQuery(""); setData(null); setPrice(""); setFcfPS(""); setNetDebtPS("");
-    setResults(null); setShowTable(false); setError(""); setPage(PAGE.HOME);
-  };
-
-  const upside = results && price ? ((results.fairValue - parseFloat(price)) / parseFloat(price) * 100) : null;
-  const safeUp = results && price ? ((results.safeValue - parseFloat(price)) / parseFloat(price) * 100) : null;
-
-  return (
-    <div style={{ minHeight:"100vh", background:C.bg, fontFamily:ff, color:C.text }}>
-      <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
-      <AnimBG />
-
-      <div style={{ position:"relative", zIndex:1 }}>
-
-        {/* ═══ HEADER ═══ */}
-        <div style={{
-          borderBottom:`1px solid ${C.border}`, padding:"16px 24px",
-          display:"flex", alignItems:"center", justifyContent:"space-between",
-          backdropFilter:"blur(24px)", background:"rgba(5,3,14,0.75)",
-          position:"sticky", top:0, zIndex:20,
-        }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={handleReset}>
-            <div style={{
-              width:38, height:38, borderRadius:12,
-              background:`linear-gradient(135deg,${C.accent},#7c3aed)`,
-              display:"flex", alignItems:"center", justifyContent:"center",
-              boxShadow:`0 4px 20px ${C.accentDim}`,
-            }}>
-              <Star size={22} color="#05030e" />
-            </div>
-            <div>
-              <div style={{ fontSize:16,fontWeight:700,letterSpacing:"-0.03em" }}>DCF Valuation</div>
-              <div style={{ fontSize:9,color:C.dim,letterSpacing:"0.08em",textTransform:"uppercase" }}>Live Data · Per Share</div>
-            </div>
-          </div>
-
-          {/* Nav dots */}
-          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
-            {["Recherche","Analyse","Résultats"].map((l,i) => (
-              <div key={l} onClick={() => { if (i <= page) setPage(i === 0 ? PAGE.HOME : i === 1 && data ? PAGE.ANALYSIS : page); }}
-                style={{
-                  display:"flex", alignItems:"center", gap:5, cursor: i <= page ? "pointer" : "default",
-                  opacity: i <= page ? 1 : 0.3,
-                }}>
-                <div style={{
-                  width:8, height:8, borderRadius:"50%",
-                  background: i === page ? C.accent : i < page ? C.green : C.dim,
-                  transition:"all 0.3s",
-                  boxShadow: i === page ? `0 0 8px ${C.accentGlow}` : "none",
-                }} />
-                <span style={{ fontSize:10, color: i === page ? C.accent : C.dim, fontWeight:600, display: window.innerWidth < 500 ? "none" : "inline" }}>{l}</span>
-                {i < 2 && <span style={{ color:C.dim, fontSize:10, margin:"0 2px" }}>›</span>}
-              </div>
-            ))}
-          </div>
-
-          {data && (
-            <div style={{ textAlign:"right" }}>
-              <div style={{ fontSize:14,fontWeight:700 }}>{data.name?.substring(0,25)}</div>
-              <div style={{ fontSize:11,color:C.accent,fontFamily:mono }}>{data.ticker} · {data.exchange}</div>
-            </div>
-          )}
-        </div>
-
-        <div style={{ maxWidth:700, margin:"0 auto", padding:"28px 20px 80px" }}>
-
-          {/* ═══════════════════════════════════════
-              PAGE: HOME
-              ═══════════════════════════════════════ */}
-          {page === PAGE.HOME && (
-            <div style={{ animation:"fadeIn 0.6s ease-out" }}>
-              {/* Hero */}
-              <div style={{ textAlign:"center", padding:"80px 0 50px" }}>
-                <div style={{ display:"inline-flex", marginBottom:24 }}>
-                  <div style={{
-                    width:64, height:64, borderRadius:18,
-                    background:`linear-gradient(135deg,${C.accent},#7c3aed)`,
-                    display:"flex", alignItems:"center", justifyContent:"center",
-                    boxShadow:`0 8px 40px ${C.accentGlow}`,
-                  }}>
-                    <Star size={38} color="#05030e" />
-                  </div>
-                </div>
-                <h1 style={{ fontSize:32, fontWeight:700, letterSpacing:"-0.04em", margin:0, lineHeight:1.1 }}>
-                  DCF <span style={{ color:C.accent }}>Valuation</span>
-                </h1>
-                <p style={{ color:C.dim, fontSize:14, marginTop:10, maxWidth:400, marginLeft:"auto", marginRight:"auto", lineHeight:1.6 }}>
-                  Valeur intrinsèque per share · Données temps réel · Calcul DCF complet
-                </p>
-              </div>
-
-              {/* Search */}
-              <Card anim delay="0.1s">
-                <div style={{ position:"relative" }}>
-                  <div style={{ display:"flex", gap:10 }}>
-                    <div style={{ flex:1, position:"relative" }}>
-                      <input
-                        type="text" value={query}
-                        onChange={e => { setQuery(e.target.value.toUpperCase()); setShowSugg(true); }}
-                        onFocus={() => setShowSugg(true)}
-                        onKeyDown={e => { if (e.key === "Enter") handleLoad(); }}
-                        placeholder="Rechercher un ticker... AAPL, NVDA, ASML"
-                        style={{
-                          width:"100%", boxSizing:"border-box", background:C.input,
-                          border:`1.5px solid ${C.inputBorder}`, borderRadius:14,
-                          color:C.text, fontSize:18, fontFamily:mono, padding:"16px 20px",
-                          outline:"none", textTransform:"uppercase", letterSpacing:"0.04em",
-                        }}
-                        onBlur={() => setTimeout(() => setShowSugg(false), 200)}
-                      />
-                      {showSugg && suggestions.length > 0 && (
-                        <div style={{
-                          position:"absolute", top:"calc(100% + 8px)", left:0, right:0,
-                          background:"rgba(10,8,22,0.98)", border:`1px solid ${C.border}`,
-                          borderRadius:14, overflow:"hidden", zIndex:30,
-                          boxShadow:"0 16px 48px rgba(0,0,0,0.7)", backdropFilter:"blur(20px)",
-                          maxHeight:320, overflowY:"auto",
-                        }}>
-                          {suggestions.map((s, i) => (
-                            <div key={s.symbol} onClick={() => handleLoad(s.symbol)}
-                              style={{
-                                padding:"12px 18px", cursor:"pointer",
-                                display:"flex", justifyContent:"space-between", alignItems:"center",
-                                borderBottom: i < suggestions.length-1 ? `1px solid ${C.border}` : "none",
-                                transition:"background 0.15s",
-                              }}
-                              onMouseOver={e => e.currentTarget.style.background = C.accentDim}
-                              onMouseOut={e => e.currentTarget.style.background = "transparent"}
-                            >
-                              <div>
-                                <span style={{ fontFamily:mono,fontWeight:700,fontSize:14,color:C.accent }}>{s.symbol}</span>
-                                {s.name && <span style={{ color:C.mid,fontSize:12,marginLeft:10 }}>{s.name.substring(0,40)}</span>}
-                              </div>
-                              <span style={{ fontSize:18, color:C.dim }}>→</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                    <button onClick={() => handleLoad()} disabled={loading}
-                      style={{
-                        background: loading
-                          ? `linear-gradient(90deg,${C.accent}66,${C.accent}33,${C.accent}66)`
-                          : `linear-gradient(135deg,${C.accent},#7c3aed)`,
-                        backgroundSize: loading ? "200% 100%" : "100% 100%",
-                        animation: loading ? "shimmer 1.5s linear infinite" : "none",
-                        border:"none", borderRadius:14, color:"#05030e", fontWeight:700,
-                        fontSize:15, padding:"0 32px", cursor:loading?"wait":"pointer",
-                        fontFamily:ff, boxShadow:`0 4px 20px ${C.accentDim}`,
-                        transition:"transform 0.15s", minWidth:120,
-                      }}
-                      onMouseOver={e => !loading && (e.target.style.transform = "translateY(-1px)")}
-                      onMouseOut={e => e.target.style.transform = "translateY(0)"}
-                    >{loading ? "Chargement..." : "Analyser"}</button>
-                  </div>
-                  {error && <div style={{ marginTop:12,fontSize:12,color:C.red }}>{error}</div>}
-                </div>
-              </Card>
-
-              {/* Popular tickers — compact */}
-              <Card anim delay="0.2s">
-                <div style={{ fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:12 }}>
-                  Accès rapide
-                </div>
-                <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                  {POPULAR.slice(0, 20).map(t => (
-                    <button key={t} onClick={() => handleLoad(t)}
-                      style={{
-                        background:C.input, border:`1px solid ${C.inputBorder}`,
-                        borderRadius:8, padding:"7px 14px", cursor:"pointer",
-                        color:C.mid, fontSize:12, fontFamily:mono, fontWeight:600,
-                        transition:"all 0.2s",
-                      }}
-                      onMouseOver={e => { e.target.style.borderColor = C.accent; e.target.style.color = C.accent; e.target.style.background = C.accentDim; }}
-                      onMouseOut={e => { e.target.style.borderColor = C.inputBorder; e.target.style.color = C.mid; e.target.style.background = C.input; }}
-                    >{t}</button>
-                  ))}
-                </div>
-                <div style={{ fontSize:10, color:C.dim, marginTop:10 }}>
-                  {POPULAR.length}+ tickers en suggestion · recherche illimitée via Finnhub
-                </div>
-              </Card>
-
-              {/* Minimal feature line */}
-              <div style={{ display:"flex", justifyContent:"center", gap:28, padding:"20px 0 0", animation:"slideUp 0.6s ease-out 0.3s both" }}>
-                {[
-                  { icon:"⚡", label:"Live Data" },
-                  { icon:"📊", label:"Per Share" },
-                  { icon:"🛡", label:"Marge de sécurité" },
-                ].map((f,i) => (
-                  <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:C.dim }}>
-                    <span style={{ fontSize:16 }}>{f.icon}</span>
-                    <span style={{ fontWeight:600 }}>{f.label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════
-              PAGE: ANALYSIS
-              ═══════════════════════════════════════ */}
-          {page === PAGE.ANALYSIS && data && (
-            <div style={{ animation:"fadeIn 0.5s ease-out" }}>
-
-              {/* Company header */}
-              <Card anim delay="0s" style={{
-                background:`linear-gradient(135deg,rgba(179,136,255,0.06),rgba(179,136,255,0.01))`,
-                border:`1px solid rgba(179,136,255,0.12)`,
-              }}>
-                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", flexWrap:"wrap", gap:14 }}>
-                  <div>
-                    <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6 }}>
-                      <h2 style={{ fontSize:24, fontWeight:700, margin:0, letterSpacing:"-0.03em" }}>{data.name}</h2>
-                    </div>
-                    <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:8 }}>
-                      <Tag>{data.ticker}</Tag>
-                      <Tag color="blue">{data.exchange}</Tag>
-                      {data.sector !== "—" && <Tag>{data.sector}</Tag>}
-                      {data.country !== "—" && <Tag>{data.country}</Tag>}
-                    </div>
-                    {data.description && (
-                      <p style={{ fontSize:12, color:C.dim, lineHeight:1.5, maxWidth:500, margin:0, marginTop:6 }}>
-                        {data.description.substring(0, 200)}...
-                      </p>
-                    )}
-                  </div>
-                  <div style={{ textAlign:"right" }}>
-                    <div style={{ fontSize:32, fontWeight:700, fontFamily:mono, color:C.accent }}>
-                      {fmtP(data.price, currency)}
-                    </div>
-                    <div style={{ fontSize:11, color:C.dim, marginTop:2 }}>Market Cap: {fmtBig(data.marketCap)}</div>
-                  </div>
-                </div>
-
-                {/* Key ratios */}
-                <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginTop:16 }}>
-                  {[
-                    { l:"P/E", v: data.peRatio != null ? Number(data.peRatio).toFixed(1) : "—" },
-                    { l:"P/B", v: data.pbRatio != null ? Number(data.pbRatio).toFixed(1) : "—" },
-                    { l:"ROIC", v: fmtPct(data.roic) },
-                    { l:"Div. Yield", v: data.dividendYield != null ? fmtPct(data.dividendYield) : "—" },
-                    { l:"Rev/Share", v: data.revenuePS != null ? fmtP(data.revenuePS, currency) : "—" },
-                  ].map(r => (
-                    <div key={r.l} style={{ background:C.input, borderRadius:10, padding:"10px 16px", border:`1px solid ${C.inputBorder}`, flex:1, minWidth:80, textAlign:"center" }}>
-                      <div style={{ fontSize:9, color:C.dim, textTransform:"uppercase", letterSpacing:"0.08em" }}>{r.l}</div>
-                      <div style={{ fontSize:15, fontWeight:700, fontFamily:mono, marginTop:2, color:C.text }}>{r.v}</div>
-                    </div>
-                  ))}
-                </div>
-              </Card>
-
-              {/* Per share inputs */}
-              <Card anim delay="0.1s">
-                <div style={{ fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:14,display:"flex",alignItems:"center",gap:6 }}>
-                  <span style={{ width:6,height:6,borderRadius:"50%",background:C.green,display:"inline-block",animation:"pulse 2s ease-in-out infinite" }}/>
-                  Métriques Per Share · Données Live · Éditables
-                </div>
-                <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
-                  <Input label={`Prix (${currency})`} value={price} onChange={setPrice} suffix={currency==="EUR"?"€":"$"} />
-                  <Input label="FCF / Action" value={fcfPS} onChange={setFcfPS} suffix={currency==="EUR"?"€":"$"} note="Free Cash Flow par action" />
-                  <Input label="Dette Nette / Action" value={netDebtPS} onChange={setNetDebtPS} suffix={currency==="EUR"?"€":"$"} note="Négatif = trésorerie nette" />
-                </div>
-              </Card>
-
-              {/* DCF Params */}
-              <Card anim delay="0.15s">
-                <div style={{ fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:14 }}>Paramètres DCF</div>
-                <div style={{ display:"flex", gap:14, flexWrap:"wrap" }}>
-                  <Input label="WACC" value={wacc} onChange={setWacc} suffix="%" />
-                  <Input label="Croissance Y1-5" value={g1} onChange={setG1} suffix="%" />
-                  <Input label="Croissance Y6-10" value={g2} onChange={setG2} suffix="%" />
-                  <Input label="Croissance terminale" value={tg} onChange={setTg} suffix="%" />
-                </div>
-              </Card>
-
-              {/* Dilution & Margin */}
-              <Card anim delay="0.2s">
-                <div style={{ display:"flex", gap:20, flexWrap:"wrap" }}>
-                  <div style={{ flex:1, minWidth:200 }}>
-                    <label style={{ fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5,display:"block" }}>
-                      Dilution / Rachat annuel
-                    </label>
-                    <div style={{ position:"relative" }}>
-                      <input type="number" step="0.5" value={dilution} onChange={e => setDilution(e.target.value)}
-                        style={{ width:"100%",boxSizing:"border-box",background:C.input,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,color:C.text,fontSize:15,fontFamily:mono,padding:"11px 44px 11px 14px",outline:"none" }} />
-                      <span style={{ position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:11,fontFamily:mono }}>%/an</span>
-                    </div>
-                    <div style={{ marginTop:6,fontSize:11,fontFamily:mono,color:parseFloat(dilution)<0?C.green:parseFloat(dilution)>0?C.red:C.dim }}>
-                      {parseFloat(dilution)<0?"✦ Buyback — FCF/action augmente":parseFloat(dilution)>0?"⚠ Dilution — FCF/action diminue":"— Neutre"}
-                    </div>
-                  </div>
-                  <div style={{ flex:1, minWidth:200 }}>
-                    <label style={{ fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:5,display:"block" }}>Marge de sécurité</label>
-                    <input type="range" min="0" max="50" step="5" value={margin} onChange={e => setMargin(e.target.value)}
-                      style={{ width:"100%",accentColor:C.accent,marginTop:10,cursor:"pointer" }} />
-                    <div style={{ display:"flex",justifyContent:"space-between",marginTop:6 }}>
-                      <span style={{ fontSize:10,color:C.dim }}>0%</span>
-                      <span style={{ fontSize:18,fontWeight:700,color:C.accent,fontFamily:mono }}>{margin}%</span>
-                      <span style={{ fontSize:10,color:C.dim }}>50%</span>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-
-              {error && <div style={{ fontSize:13,color:C.red,marginBottom:12 }}>{error}</div>}
-
-              {/* Buttons */}
-              <div style={{ display:"flex", gap:12 }}>
-                <button onClick={handleReset}
-                  style={{
-                    padding:"16px 28px", background:"transparent", border:`1px solid ${C.inputBorder}`,
-                    borderRadius:14, color:C.dim, fontSize:14, fontWeight:600, cursor:"pointer", fontFamily:ff,
-                  }}>← Retour</button>
-                <button onClick={handleCalculate}
-                  style={{
-                    flex:1, padding:"16px", border:"none", borderRadius:14,
-                    background:`linear-gradient(135deg,${C.accent},#7c3aed)`,
-                    color:"#05030e", fontSize:16, fontWeight:700, cursor:"pointer",
-                    fontFamily:ff, letterSpacing:"0.03em",
-                    boxShadow:`0 6px 30px ${C.accentGlow}`,
-                    transition:"transform 0.15s,box-shadow 0.15s",
-                    display:"flex", alignItems:"center", justifyContent:"center", gap:8,
-                  }}
-                  onMouseOver={e => { e.currentTarget.style.transform="translateY(-2px)"; }}
-                  onMouseOut={e => { e.currentTarget.style.transform="translateY(0)"; }}
-                >
-                  <Star size={18} color="#05030e" /> Calculer la Valeur Intrinsèque
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* ═══════════════════════════════════════
-              PAGE: RESULTS
-              ═══════════════════════════════════════ */}
-          {page === PAGE.RESULTS && results && data && (
-            <div style={{ animation:"fadeIn 0.5s ease-out" }}>
-
-              {/* Back + ticker */}
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:16 }}>
-                <button onClick={() => setPage(PAGE.ANALYSIS)}
-                  style={{ background:"transparent",border:`1px solid ${C.inputBorder}`,borderRadius:10,padding:"8px 18px",color:C.dim,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:ff }}>
-                  ← Modifier
-                </button>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <span style={{ fontSize:16,fontWeight:700 }}>{data.name?.substring(0,20)}</span>
-                  <Tag>{data.ticker}</Tag>
-                </div>
-                <button onClick={handleReset}
-                  style={{ background:"transparent",border:`1px solid ${C.inputBorder}`,borderRadius:10,padding:"8px 18px",color:C.dim,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:ff }}>
-                  Nouveau ↻
-                </button>
-              </div>
-
-              {/* Verdict */}
-              <Card glow anim delay="0s" style={{
-                textAlign:"center", padding:"36px 24px",
-                background:`linear-gradient(135deg,rgba(179,136,255,0.1),rgba(179,136,255,0.02))`,
-                border:`1px solid rgba(179,136,255,0.18)`,
-              }}>
-                <div style={{ fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:"0.15em",marginBottom:8 }}>Valeur Intrinsèque / Action</div>
-                <div style={{ fontSize:52,fontWeight:700,fontFamily:mono,color:C.accent,lineHeight:1 }}>
-                  {fmtP(results.fairValue, currency)}
-                </div>
-                {upside !== null && (
-                  <div style={{ fontSize:16,marginTop:12,fontFamily:mono,fontWeight:600,color:upside>0?C.green:C.red }}>
-                    {upside>0?"▲":"▼"} {Math.abs(upside).toFixed(1)}% vs prix actuel {fmtP(parseFloat(price),currency)}
-                  </div>
-                )}
-                <div style={{ display:"flex",gap:12,justifyContent:"center",marginTop:24,flexWrap:"wrap" }}>
-                  <div style={{ background:C.input,borderRadius:12,padding:"14px 24px",border:`1px solid ${C.inputBorder}` }}>
-                    <div style={{ fontSize:9,color:C.dim,textTransform:"uppercase" }}>Avec marge {margin}%</div>
-                    <div style={{ fontSize:24,fontWeight:700,fontFamily:mono,color:safeUp>0?C.green:C.red }}>{fmtP(results.safeValue,currency)}</div>
-                  </div>
-                  <div style={{ background:C.input,borderRadius:12,padding:"14px 24px",border:`1px solid ${C.inputBorder}` }}>
-                    <div style={{ fontSize:9,color:C.dim,textTransform:"uppercase" }}>Σ DCF /share</div>
-                    <div style={{ fontSize:24,fontWeight:700,fontFamily:mono }}>{fmtP(results.sumDCF,currency)}</div>
-                  </div>
-                  <div style={{ background:C.input,borderRadius:12,padding:"14px 24px",border:`1px solid ${C.inputBorder}` }}>
-                    <div style={{ fontSize:9,color:C.dim,textTransform:"uppercase" }}>Terminal /share</div>
-                    <div style={{ fontSize:24,fontWeight:700,fontFamily:mono }}>{fmtP(results.discTV,currency)}</div>
-                  </div>
-                </div>
-              </Card>
-
-              {/* Signal pills */}
-              <div style={{ display:"flex", gap:10, flexWrap:"wrap", marginBottom:16, animation:"slideUp 0.5s ease-out 0.1s both" }}>
-                <Pill label="Signal" value={safeUp>0?"ACHAT":safeUp>-15?"NEUTRE":"SURVALORISÉ"} color={safeUp>0?"green":safeUp>-15?null:"red"} />
-                <Pill label="Upside Fair" value={(upside>0?"+":"")+(upside?.toFixed(1)||"—")+"%"} color={upside>0?"green":"red"} />
-                <Pill label="Upside Safe" value={(safeUp>0?"+":"")+(safeUp?.toFixed(1)||"—")+"%"} color={safeUp>0?"green":"red"} />
-              </div>
-
-              {/* Visual bars */}
-              {price && (
-                <Card anim delay="0.15s">
-                  <div style={{ fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:18 }}>Comparaison Visuelle</div>
-                  {[
-                    { label:"Prix Actuel", value:parseFloat(price), color:C.mid },
-                    { label:`Avec Marge ${margin}%`, value:results.safeValue, color:C.accent },
-                    { label:"Fair Value", value:results.fairValue, color:C.green },
-                  ].map(bar => {
-                    const mx = Math.max(parseFloat(price),results.fairValue,results.safeValue,1)*1.15;
-                    const pct = Math.max(0,Math.min(100,(bar.value/mx)*100));
-                    return (
-                      <div key={bar.label} style={{ marginBottom:14 }}>
-                        <div style={{ display:"flex",justifyContent:"space-between",marginBottom:5 }}>
-                          <span style={{ fontSize:11,color:C.dim }}>{bar.label}</span>
-                          <span style={{ fontSize:14,fontFamily:mono,fontWeight:600,color:bar.color }}>{fmtP(bar.value,currency)}</span>
-                        </div>
-                        <div style={{ height:8,background:C.input,borderRadius:4,overflow:"hidden" }}>
-                          <div style={{ width:pct+"%",height:"100%",background:`linear-gradient(90deg,${bar.color},${bar.color}88)`,borderRadius:4,transition:"width 1s cubic-bezier(0.16,1,0.3,1)" }}/>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </Card>
-              )}
-
-              {/* Projection table */}
-              <Card anim delay="0.2s">
-                <div onClick={() => setShowTable(!showTable)} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none" }}>
-                  <div style={{ fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em" }}>Projections 10 Ans · Per Share</div>
-                  <span style={{ fontSize:20,color:C.dim,transition:"transform 0.3s",transform:showTable?"rotate(180deg)":"rotate(0)" }}>▾</span>
-                </div>
-                {showTable && (
-                  <div style={{ marginTop:14,overflowX:"auto" }}>
-                    <table style={{ width:"100%",borderCollapse:"collapse",fontFamily:mono,fontSize:12 }}>
-                      <thead>
-                        <tr style={{ borderBottom:`1px solid ${C.border}` }}>
-                          {["An.","Crois.","FCF/sh","FCF/sh Act.","Cumul Act."].map(h => (
-                            <th key={h} style={{ padding:"8px 10px",textAlign:"right",color:C.dim,fontWeight:600,fontSize:9,textTransform:"uppercase" }}>{h}</th>
-                          ))}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {results.projections.map((p,i) => {
-                          const cum = results.projections.slice(0,i+1).reduce((s,x) => s+x.discounted, 0);
-                          return (
-                            <tr key={p.year} style={{ borderBottom:`1px solid ${C.border}22` }}>
-                              <td style={{ padding:"7px 10px",textAlign:"right",color:C.mid }}>Y{p.year}</td>
-                              <td style={{ padding:"7px 10px",textAlign:"right",color:p.gRate>=0?C.green:C.red }}>{(p.gRate*100).toFixed(1)}%</td>
-                              <td style={{ padding:"7px 10px",textAlign:"right",color:C.text }}>{fmtN(p.fcfPS)}</td>
-                              <td style={{ padding:"7px 10px",textAlign:"right",color:C.accent }}>{fmtN(p.discounted)}</td>
-                              <td style={{ padding:"7px 10px",textAlign:"right",color:C.mid }}>{fmtN(cum)}</td>
-                            </tr>
-                          );
-                        })}
-                        <tr style={{ borderTop:`2px solid ${C.accent}33` }}>
-                          <td colSpan={2} style={{ padding:"9px 10px",textAlign:"right",color:C.accent,fontWeight:700,fontSize:11 }}>Terminal /sh</td>
-                          <td style={{ padding:"9px 10px",textAlign:"right",color:C.dim }}>{fmtN(results.tv)}</td>
-                          <td style={{ padding:"9px 10px",textAlign:"right",color:C.accent,fontWeight:700 }}>{fmtN(results.discTV)}</td>
-                          <td style={{ padding:"9px 10px",textAlign:"right",color:C.text,fontWeight:700 }}>{fmtN(results.sumDCF+results.discTV)}</td>
-                        </tr>
-                        <tr style={{ borderTop:`1px solid ${C.border}` }}>
-                          <td colSpan={2} style={{ padding:"9px 10px",textAlign:"right",color:C.red,fontWeight:700,fontSize:11 }}>− Dette Nette /sh</td>
-                          <td colSpan={2}/>
-                          <td style={{ padding:"9px 10px",textAlign:"right",color:parseFloat(netDebtPS)>0?C.red:C.green,fontWeight:700 }}>
-                            {parseFloat(netDebtPS)>0?"−":"+"}{fmtN(Math.abs(parseFloat(netDebtPS)||0))}
-                          </td>
-                        </tr>
-                        <tr style={{ borderTop:`2px solid ${C.green}44` }}>
-                          <td colSpan={2} style={{ padding:"10px 10px",textAlign:"right",color:C.green,fontWeight:700,fontSize:13 }}>= FAIR VALUE /sh</td>
-                          <td colSpan={2}/>
-                          <td style={{ padding:"10px 10px",textAlign:"right",color:C.green,fontWeight:700,fontSize:18 }}>{fmtP(results.fairValue,currency)}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </Card>
-            </div>
-          )}
-
-          {/* Footer */}
-          <div style={{ textAlign:"center",marginTop:40,fontSize:10,color:C.dim,lineHeight:1.7 }}>
-            <Star size={14} color={C.dim} /><br/>
-            DCF Valuation · Données live Finnhub.io · Toutes métriques per share<br/>
-            Ceci n'est pas un conseil d'investissement.
-          </div>
-        </div>
+    {/* HOME */}
+    {page===PG.HOME&&<div style={{animation:"fadeIn .6s ease-out"}}>
+      <div style={{textAlign:"center",padding:"80px 0 50px"}}>
+        <div style={{display:"inline-flex",marginBottom:24}}><div style={{width:64,height:64,borderRadius:18,background:`linear-gradient(135deg,${C.accent},#7c3aed)`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 8px 40px ${C.accentGlow}`}}><Star size={38} color="#05030e"/></div></div>
+        <h1 style={{fontSize:34,fontWeight:700,letterSpacing:"-.04em",margin:0}}>Fin<span style={{color:C.accent}}>heist</span></h1>
+        <p style={{color:C.dim,fontSize:14,marginTop:10,maxWidth:420,marginLeft:"auto",marginRight:"auto",lineHeight:1.6}}>Valeur intrins\u00e8que per share \u00b7 Donn\u00e9es temps r\u00e9el \u00b7 Consensus analystes</p>
       </div>
-    </div>
-  );
+      <Crd anim delay="0.1s"><div style={{display:"flex",gap:10}}><div style={{flex:1,position:"relative"}}><input type="text" value={query} onChange={e=>{setQuery(e.target.value.toUpperCase());setShowS(true);}} onFocus={()=>setShowS(true)} onKeyDown={e=>{if(e.key==="Enter")load();}} placeholder="AAPL, NVDA, ASML, DUOL..." style={{width:"100%",boxSizing:"border-box",background:C.input,border:`1.5px solid ${C.inputBorder}`,borderRadius:14,color:C.text,fontSize:18,fontFamily:mono,padding:"16px 20px",outline:"none",textTransform:"uppercase"}} onBlur={()=>setTimeout(()=>setShowS(false),200)}/>{showS&&sugg.length>0&&<div style={{position:"absolute",top:"calc(100% + 8px)",left:0,right:0,background:"rgba(10,8,22,.98)",border:`1px solid ${C.border}`,borderRadius:14,overflow:"hidden",zIndex:30,boxShadow:"0 16px 48px rgba(0,0,0,.7)",maxHeight:300,overflowY:"auto"}}>{sugg.map((s,i)=><div key={s.symbol} onClick={()=>load(s.symbol)} style={{padding:"12px 18px",cursor:"pointer",display:"flex",justifyContent:"space-between",borderBottom:i<sugg.length-1?`1px solid ${C.border}`:"none",transition:"background .15s"}} onMouseOver={e=>e.currentTarget.style.background=C.accentDim} onMouseOut={e=>e.currentTarget.style.background="transparent"}><div><span style={{fontFamily:mono,fontWeight:700,fontSize:14,color:C.accent}}>{s.symbol}</span>{s.name&&<span style={{color:C.mid,fontSize:12,marginLeft:10}}>{s.name.substring(0,35)}</span>}</div><span style={{color:C.dim}}>\u2192</span></div>)}</div>}</div><button onClick={()=>load()} disabled={loading} style={{background:`linear-gradient(135deg,${C.accent},#7c3aed)`,border:"none",borderRadius:14,color:"#05030e",fontWeight:700,fontSize:15,padding:"0 32px",cursor:loading?"wait":"pointer",fontFamily:ff,boxShadow:`0 4px 20px ${C.accentDim}`,minWidth:120}}>{loading?"...":"Analyser"}</button></div>{err&&<div style={{marginTop:12,fontSize:12,color:C.red}}>{err}</div>}</Crd>
+      <Crd anim delay="0.2s"><div style={{fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".12em",marginBottom:12}}>Acc\u00e8s rapide</div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{POPULAR.slice(0,20).map(t=><button key={t} onClick={()=>load(t)} style={{background:C.input,border:`1px solid ${C.inputBorder}`,borderRadius:8,padding:"7px 14px",cursor:"pointer",color:C.mid,fontSize:12,fontFamily:mono,fontWeight:600,transition:"all .2s"}} onMouseOver={e=>{e.target.style.borderColor=C.accent;e.target.style.color=C.accent;e.target.style.background=C.accentDim;}} onMouseOut={e=>{e.target.style.borderColor=C.inputBorder;e.target.style.color=C.mid;e.target.style.background=C.input;}}>{t}</button>)}</div></Crd>
+    </div>}
+
+    {/* ANALYSIS */}
+    {page===PG.ANA&&data&&<div style={{animation:"fadeIn .5s ease-out"}}>
+      <Crd anim delay="0s" style={{background:`linear-gradient(135deg,rgba(179,136,255,.06),rgba(179,136,255,.01))`,border:`1px solid rgba(179,136,255,.12)`}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",flexWrap:"wrap",gap:14}}>
+          <div><h2 style={{fontSize:22,fontWeight:700,margin:"0 0 6px"}}>{data.name}</h2><div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:8}}><Tag>{data.ticker}</Tag><Tag color="blue">{data.exchange}</Tag>{data.sector!=="\u2014"&&<Tag>{data.sector}</Tag>}</div>{data.desc&&<p style={{fontSize:11,color:C.dim,lineHeight:1.5,maxWidth:400,margin:0}}>{data.desc.substring(0,180)}</p>}</div>
+          <div style={{textAlign:"right"}}><div style={{fontSize:30,fontWeight:700,fontFamily:mono,color:C.accent}}>{fmtP(data.price,cur)}</div><div style={{fontSize:11,color:C.dim}}>Cap: {fmtB(data.marketCap)}</div><button onClick={addWl} style={{marginTop:8,background:inWl?C.greenDim:C.accentDim,border:`1px solid ${inWl?C.green+"33":C.accent+"33"}`,borderRadius:8,padding:"5px 12px",color:inWl?C.green:C.accent,fontSize:10,fontWeight:600,cursor:"pointer",fontFamily:ff}}>{inWl?"\u2713 Watchlist":"+ Watchlist"}</button></div>
+        </div>
+        <div style={{display:"flex",gap:8,flexWrap:"wrap",marginTop:16}}>{[{l:"P/E",v:data.pe!=null?Number(data.pe).toFixed(1):"\u2014",t:TIPS.pe},{l:"P/B",v:data.pb!=null?Number(data.pb).toFixed(1):"\u2014",t:TIPS.pb},{l:"ROIC",v:fmtPc(data.roic),t:TIPS.roic},{l:"Div.",v:data.divY!=null?fmtPc(data.divY):"\u2014",t:TIPS.divYield},{l:"Rev/sh",v:data.revPS!=null?fmtP(data.revPS,cur):"\u2014",t:TIPS.revPS}].map(r=><div key={r.l} style={{background:C.input,borderRadius:10,padding:"10px 16px",border:`1px solid ${C.inputBorder}`,flex:1,minWidth:70,textAlign:"center"}}><Tip text={r.t}><div style={{fontSize:9,color:C.dim,textTransform:"uppercase"}}>{r.l} \u24D8</div></Tip><div style={{fontSize:14,fontWeight:700,fontFamily:mono,marginTop:2}}>{r.v}</div></div>)}</div>
+      </Crd>
+      <ConsBar rec={cons.rec} tgt={cons.tgt}/>
+      <Crd anim delay="0.1s"><div style={{fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:14,display:"flex",alignItems:"center",gap:6}}><span style={{width:6,height:6,borderRadius:"50%",background:C.green,display:"inline-block",animation:"pulse 2s ease-in-out infinite"}}/> M\u00e9triques Per Share \u00b7 Live</div><div style={{display:"flex",gap:14,flexWrap:"wrap"}}><Inp label={`Prix (${cur})`} value={price} onChange={setPrice} suffix={cur==="EUR"?"\u20AC":"$"}/><Inp label="FCF / Action" value={fcfPS} onChange={setFcfPS} suffix={cur==="EUR"?"\u20AC":"$"} tip={TIPS.fcf}/><Inp label="Dette Nette / Action" value={ndPS} onChange={setNdPS} suffix={cur==="EUR"?"\u20AC":"$"} note="N\u00e9gatif = tr\u00e9sorerie nette" tip={TIPS.netDebt}/></div></Crd>
+      <Crd anim delay="0.15s"><div style={{fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:14}}>Param\u00e8tres DCF</div><div style={{display:"flex",gap:14,flexWrap:"wrap"}}><Inp label="WACC" value={wacc} onChange={setWacc} suffix="%" tip={TIPS.wacc}/><Inp label="Croissance Y1-5" value={g1} onChange={setG1} suffix="%" tip={TIPS.growth}/><Inp label="Croissance Y6-10" value={g2} onChange={setG2} suffix="%" tip={TIPS.growth}/><Inp label="Croiss. terminale" value={tg} onChange={setTg} suffix="%" tip={TIPS.terminal}/></div></Crd>
+      <Crd anim delay="0.2s"><div style={{display:"flex",gap:20,flexWrap:"wrap"}}><div style={{flex:1,minWidth:200}}><label style={{fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:5,display:"block"}}><Tip text={TIPS.dilution}>Dilution / Rachat \u24D8</Tip></label><div style={{position:"relative"}}><input type="number" step="0.5" value={dil} onChange={e=>setDil(e.target.value)} style={{width:"100%",boxSizing:"border-box",background:C.input,border:`1.5px solid ${C.inputBorder}`,borderRadius:10,color:C.text,fontSize:15,fontFamily:mono,padding:"11px 44px 11px 14px",outline:"none"}}/><span style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",color:C.dim,fontSize:11,fontFamily:mono}}>%/an</span></div><div style={{marginTop:6,fontSize:11,fontFamily:mono,color:parseFloat(dil)<0?C.green:parseFloat(dil)>0?C.red:C.dim}}>{parseFloat(dil)<0?"\u2726 Buyback":parseFloat(dil)>0?"\u26A0 Dilution":"\u2014 Neutre"}</div></div><div style={{flex:1,minWidth:200}}><label style={{fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:5,display:"block"}}><Tip text={TIPS.margin}>Marge de s\u00e9curit\u00e9 \u24D8</Tip></label><input type="range" min="0" max="50" step="5" value={mg} onChange={e=>setMg(e.target.value)} style={{width:"100%",accentColor:C.accent,marginTop:10,cursor:"pointer"}}/><div style={{display:"flex",justifyContent:"space-between",marginTop:6}}><span style={{fontSize:10,color:C.dim}}>0%</span><span style={{fontSize:18,fontWeight:700,color:C.accent,fontFamily:mono}}>{mg}%</span><span style={{fontSize:10,color:C.dim}}>50%</span></div></div></div></Crd>
+      {err&&<div style={{fontSize:13,color:C.red,marginBottom:12}}>{err}</div>}
+      <div style={{display:"flex",gap:12}}><button onClick={reset} style={{padding:"16px 28px",background:"transparent",border:`1px solid ${C.inputBorder}`,borderRadius:14,color:C.dim,fontSize:14,fontWeight:600,cursor:"pointer",fontFamily:ff}}>\u2190 Retour</button><button onClick={calc} style={{flex:1,padding:"16px",border:"none",borderRadius:14,background:`linear-gradient(135deg,${C.accent},#7c3aed)`,color:"#05030e",fontSize:16,fontWeight:700,cursor:"pointer",fontFamily:ff,boxShadow:`0 6px 30px ${C.accentGlow}`,display:"flex",alignItems:"center",justifyContent:"center",gap:8,transition:"transform .15s"}} onMouseOver={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseOut={e=>e.currentTarget.style.transform="translateY(0)"}><Star size={18} color="#05030e"/>Calculer la Valeur Intrins\u00e8que</button></div>
+    </div>}
+
+    {/* RESULTS */}
+    {page===PG.RES&&res&&data&&<div style={{animation:"fadeIn .5s ease-out"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}><button onClick={()=>setPage(PG.ANA)} style={{background:"transparent",border:`1px solid ${C.inputBorder}`,borderRadius:10,padding:"8px 18px",color:C.dim,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:ff}}>\u2190 Modifier</button><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontSize:15,fontWeight:700}}>{data.name?.substring(0,20)}</span><Tag>{data.ticker}</Tag></div><button onClick={reset} style={{background:"transparent",border:`1px solid ${C.inputBorder}`,borderRadius:10,padding:"8px 18px",color:C.dim,fontSize:13,fontWeight:600,cursor:"pointer",fontFamily:ff}}>Nouveau \u21BB</button></div>
+      <Crd glow anim delay="0s" style={{textAlign:"center",padding:"36px 24px",background:`linear-gradient(135deg,rgba(179,136,255,.1),rgba(179,136,255,.02))`,border:`1px solid rgba(179,136,255,.18)`}}><div style={{fontSize:10,color:C.dim,textTransform:"uppercase",letterSpacing:".15em",marginBottom:8}}>Valeur Intrins\u00e8que / Action</div><div style={{fontSize:48,fontWeight:700,fontFamily:mono,color:C.accent,lineHeight:1}}>{fmtP(res.fv,cur)}</div>{up!==null&&<div style={{fontSize:15,marginTop:12,fontFamily:mono,fontWeight:600,color:up>0?C.green:C.red}}>{up>0?"\u25B2":"\u25BC"} {Math.abs(up).toFixed(1)}% vs {fmtP(parseFloat(price),cur)}</div>}<div style={{display:"flex",gap:12,justifyContent:"center",marginTop:24,flexWrap:"wrap"}}><div style={{background:C.input,borderRadius:12,padding:"14px 24px",border:`1px solid ${C.inputBorder}`}}><div style={{fontSize:9,color:C.dim,textTransform:"uppercase"}}>Avec marge {mg}%</div><div style={{fontSize:22,fontWeight:700,fontFamily:mono,color:su>0?C.green:C.red}}>{fmtP(res.sv,cur)}</div></div><div style={{background:C.input,borderRadius:12,padding:"14px 24px",border:`1px solid ${C.inputBorder}`}}><div style={{fontSize:9,color:C.dim,textTransform:"uppercase"}}>\u03A3 DCF /sh</div><div style={{fontSize:22,fontWeight:700,fontFamily:mono}}>{fmtP(res.s,cur)}</div></div><div style={{background:C.input,borderRadius:12,padding:"14px 24px",border:`1px solid ${C.inputBorder}`}}><div style={{fontSize:9,color:C.dim,textTransform:"uppercase"}}>Terminal /sh</div><div style={{fontSize:22,fontWeight:700,fontFamily:mono}}>{fmtP(res.dtv,cur)}</div></div></div></Crd>
+      <div style={{display:"flex",gap:10,flexWrap:"wrap",marginBottom:16}}><Pill label="Signal" value={su>0?"ACHAT":su>-15?"NEUTRE":"SURVALORI\u00C9"} color={su>0?"green":su>-15?null:"red"}/><Pill label="Upside Fair" value={(up>0?"+":"")+(up?.toFixed(1)||"\u2014")+"%"} color={up>0?"green":"red"}/><Pill label="Upside Safe" value={(su>0?"+":"")+(su?.toFixed(1)||"\u2014")+"%"} color={su>0?"green":"red"}/></div>
+      {price&&<Crd anim delay="0.15s"><div style={{fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:18}}>Comparaison</div>{[{l:"Prix Actuel",v:parseFloat(price),c:C.mid},{l:`Marge ${mg}%`,v:res.sv,c:C.accent},{l:"Fair Value",v:res.fv,c:C.green}].map(b=>{const mx=Math.max(parseFloat(price),res.fv,res.sv,1)*1.15;return<div key={b.l} style={{marginBottom:14}}><div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}><span style={{fontSize:11,color:C.dim}}>{b.l}</span><span style={{fontSize:14,fontFamily:mono,fontWeight:600,color:b.c}}>{fmtP(b.v,cur)}</span></div><div style={{height:8,background:C.input,borderRadius:4,overflow:"hidden"}}><div style={{width:Math.max(0,Math.min(100,b.v/mx*100))+"%",height:"100%",background:`linear-gradient(90deg,${b.c},${b.c}88)`,borderRadius:4,transition:"width 1s cubic-bezier(.16,1,.3,1)"}}/></div></div>;})}</Crd>}
+      <Crd anim delay="0.2s"><div onClick={()=>setShowT(!showT)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",cursor:"pointer",userSelect:"none"}}><div style={{fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em"}}>Projections 10 Ans</div><span style={{fontSize:20,color:C.dim,transition:"transform .3s",transform:showT?"rotate(180deg)":"rotate(0)"}}>\u25BE</span></div>{showT&&<div style={{marginTop:14,overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",fontFamily:mono,fontSize:12}}><thead><tr style={{borderBottom:`1px solid ${C.border}`}}>{["An.","Cr.","FCF/sh","Act.","Cumul"].map(h=><th key={h} style={{padding:"8px 10px",textAlign:"right",color:C.dim,fontWeight:600,fontSize:9,textTransform:"uppercase"}}>{h}</th>)}</tr></thead><tbody>{res.pr.map((p,i)=>{const cm=res.pr.slice(0,i+1).reduce((x,y)=>x+y.disc,0);return<tr key={p.year} style={{borderBottom:`1px solid ${C.border}22`}}><td style={{padding:"7px 10px",textAlign:"right",color:C.mid}}>Y{p.year}</td><td style={{padding:"7px 10px",textAlign:"right",color:p.g>=0?C.green:C.red}}>{(p.g*100).toFixed(1)}%</td><td style={{padding:"7px 10px",textAlign:"right",color:C.text}}>{fmtN(p.fcf)}</td><td style={{padding:"7px 10px",textAlign:"right",color:C.accent}}>{fmtN(p.disc)}</td><td style={{padding:"7px 10px",textAlign:"right",color:C.mid}}>{fmtN(cm)}</td></tr>;})}<tr style={{borderTop:`2px solid ${C.accent}33`}}><td colSpan={2} style={{padding:"9px 10px",textAlign:"right",color:C.accent,fontWeight:700,fontSize:11}}>Terminal</td><td style={{padding:"9px 10px",textAlign:"right",color:C.dim}}>{fmtN(res.tv)}</td><td style={{padding:"9px 10px",textAlign:"right",color:C.accent,fontWeight:700}}>{fmtN(res.dtv)}</td><td style={{padding:"9px 10px",textAlign:"right",color:C.text,fontWeight:700}}>{fmtN(res.s+res.dtv)}</td></tr><tr style={{borderTop:`1px solid ${C.border}`}}><td colSpan={2} style={{padding:"9px 10px",textAlign:"right",color:C.red,fontWeight:700,fontSize:11}}>\u2212 Dette /sh</td><td colSpan={2}/><td style={{padding:"9px 10px",textAlign:"right",color:parseFloat(ndPS)>0?C.red:C.green,fontWeight:700}}>{parseFloat(ndPS)>0?"\u2212":"+"}{fmtN(Math.abs(parseFloat(ndPS)||0))}</td></tr><tr style={{borderTop:`2px solid ${C.green}44`}}><td colSpan={2} style={{padding:"10px 10px",textAlign:"right",color:C.green,fontWeight:700,fontSize:13}}>= FAIR VALUE</td><td colSpan={2}/><td style={{padding:"10px 10px",textAlign:"right",color:C.green,fontWeight:700,fontSize:18}}>{fmtP(res.fv,cur)}</td></tr></tbody></table></div>}</Crd>
+    </div>}
+
+    {/* WATCHLIST */}
+    {page===PG.WL&&<div style={{animation:"fadeIn .5s ease-out"}}>
+      <div style={{textAlign:"center",padding:"40px 0 30px"}}><h2 style={{fontSize:26,fontWeight:700,margin:0}}>\u2605 <span style={{color:C.accent}}>Watchlist</span></h2><p style={{color:C.dim,fontSize:13,marginTop:8}}>Vos actions en surveillance</p></div>
+      {wl.length===0?<Crd style={{textAlign:"center",padding:40}}><div style={{fontSize:40,marginBottom:12}}>\u2605</div><div style={{color:C.dim,fontSize:14}}>Watchlist vide</div><div style={{color:C.dim,fontSize:12,marginTop:6}}>Analysez une action et cliquez "+ Watchlist"</div><button onClick={reset} style={{marginTop:16,background:`linear-gradient(135deg,${C.accent},#7c3aed)`,border:"none",borderRadius:10,padding:"10px 24px",color:"#05030e",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:ff}}>Rechercher</button></Crd>:wl.map(w=><Crd key={w.ticker} style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}><div onClick={()=>load(w.ticker)} style={{flex:1,cursor:"pointer"}}><div style={{display:"flex",alignItems:"center",gap:8}}><span style={{fontFamily:mono,fontWeight:700,fontSize:16,color:C.accent}}>{w.ticker}</span><span style={{fontSize:13,color:C.mid}}>{w.name?.substring(0,30)}</span></div><div style={{fontSize:10,color:C.dim,marginTop:4}}>Ajout\u00e9 le {w.date} \u00b7 {fmtP(w.price,w.currency)}</div></div><div style={{display:"flex",gap:8}}><button onClick={()=>load(w.ticker)} style={{background:C.accentDim,border:"none",borderRadius:8,padding:"8px 14px",color:C.accent,fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:ff}}>Analyser</button><button onClick={()=>rmWl(w.ticker)} style={{background:C.redDim,border:"none",borderRadius:8,padding:"8px 12px",color:C.red,fontSize:11,fontWeight:600,cursor:"pointer"}}>\u2715</button></div></Crd>)}
+    </div>}
+
+    {/* SUPERINVESTORS */}
+    {page===PG.GU&&<div style={{animation:"fadeIn .5s ease-out"}}>
+      <div style={{textAlign:"center",padding:"40px 0 30px"}}><h2 style={{fontSize:26,fontWeight:700,margin:0}}>{"\uD83D\uDC51"} <span style={{color:C.accent}}>Superinvestors</span></h2><p style={{color:C.dim,fontSize:13,marginTop:8}}>Portefeuilles 13F publics des l\u00e9gendes</p></div>
+      <Crd style={{marginBottom:20}}><input type="text" value={gS} onChange={e=>setGS(e.target.value)} placeholder="Rechercher un investisseur ou ticker..." style={{width:"100%",boxSizing:"border-box",background:C.input,border:`1.5px solid ${C.inputBorder}`,borderRadius:12,color:C.text,fontSize:14,fontFamily:ff,padding:"12px 16px",outline:"none"}}/></Crd>
+      {GURUS.filter(g=>{const q=gS.toLowerCase();return!q||g.name.toLowerCase().includes(q)||g.fund.toLowerCase().includes(q)||g.holdings.some(h=>h.toLowerCase().includes(q));}).map(g=><Crd key={g.name}><div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}><div style={{display:"flex",alignItems:"center",gap:12}}><div style={{width:44,height:44,borderRadius:12,background:C.accentDim,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>{g.img}</div><div><div style={{fontSize:16,fontWeight:700}}>{g.name}</div><div style={{fontSize:11,color:C.dim}}>{g.fund}</div></div></div><div style={{textAlign:"right"}}><div style={{fontSize:14,fontWeight:700,fontFamily:mono,color:C.accent}}>{g.value}</div><div style={{fontSize:10,color:C.dim}}>{g.holdings.length} positions</div></div></div><div style={{display:"flex",flexWrap:"wrap",gap:6}}>{g.holdings.map(h=><button key={h} onClick={()=>{if(h.length<=5&&!h.includes(" "))load(h);}} style={{background:C.input,border:`1px solid ${C.inputBorder}`,borderRadius:6,padding:"4px 10px",color:C.mid,fontSize:11,fontFamily:mono,fontWeight:600,cursor:h.length<=5?"pointer":"default",transition:"all .2s"}} onMouseOver={e=>{if(h.length<=5){e.target.style.borderColor=C.accent;e.target.style.color=C.accent;}}} onMouseOut={e=>{e.target.style.borderColor=C.inputBorder;e.target.style.color=C.mid;}}>{h}</button>)}</div></Crd>)}
+    </div>}
+
+    {/* ABOUT */}
+    {page===PG.ABT&&<div style={{animation:"fadeIn .5s ease-out"}}>
+      <div style={{textAlign:"center",padding:"40px 0 30px"}}><div style={{display:"inline-flex",marginBottom:16}}><div style={{width:56,height:56,borderRadius:16,background:`linear-gradient(135deg,${C.accent},#7c3aed)`,display:"flex",alignItems:"center",justifyContent:"center",boxShadow:`0 6px 30px ${C.accentGlow}`}}><Star size={32} color="#05030e"/></div></div><h2 style={{fontSize:26,fontWeight:700,margin:0}}>Fin<span style={{color:C.accent}}>heist</span></h2><p style={{color:C.dim,fontSize:13,marginTop:8}}>Intrinsic Value Engine</p></div>
+      <Crd><div style={{fontSize:14,lineHeight:1.8,color:C.mid}}>Finheist est un outil d'analyse de valorisation intrins\u00e8que par actualisation des flux de tr\u00e9sorerie (DCF). Con\u00e7u pour les investisseurs fondamentaux qui souhaitent estimer la valeur r\u00e9elle d'une action.<br/><br/>Donn\u00e9es financi\u00e8res en temps r\u00e9el via Finnhub.io. Consensus analystes int\u00e9gr\u00e9 (buy/hold/sell + price targets). Portefeuilles de superinvestors (donn\u00e9es 13F publiques SEC). Toutes m\u00e9triques per share.<br/><br/>Gratuit et open source. Ceci n'est pas un conseil d'investissement.</div></Crd>
+      <Crd><div style={{fontSize:12,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:14}}>Contact</div><textarea value={cMsg} onChange={e=>setCMsg(e.target.value)} rows={4} placeholder="Remarque, suggestion, question..." style={{width:"100%",boxSizing:"border-box",background:C.input,border:`1.5px solid ${C.inputBorder}`,borderRadius:12,color:C.text,fontSize:14,fontFamily:ff,padding:"14px 16px",outline:"none",resize:"vertical",marginBottom:12}}/><button onClick={()=>{if(cMsg.trim()){setCSent(true);setTimeout(()=>setCSent(false),3000);}}} style={{background:cSent?C.greenDim:`linear-gradient(135deg,${C.accent},#7c3aed)`,border:"none",borderRadius:10,padding:"12px 24px",color:cSent?C.green:"#05030e",fontWeight:700,fontSize:13,cursor:"pointer",fontFamily:ff}}>{cSent?"\u2713 Envoy\u00e9":"Envoyer"}</button></Crd>
+      <Crd><div style={{fontSize:12,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:".1em",marginBottom:10}}>Cr\u00e9dits</div><div style={{fontSize:13,color:C.mid,lineHeight:1.8}}>D\u00e9velopp\u00e9 par <span style={{color:C.accent,fontWeight:600}}>Yanis Mendeng</span><br/>Donn\u00e9es : Finnhub.io<br/>Portefeuilles : 13F publics (SEC)<br/>H\u00e9bergement : Vercel</div></Crd>
+    </div>}
+
+    <div style={{textAlign:"center",marginTop:40,fontSize:10,color:C.dim,lineHeight:1.7}}><Star size={14} color={C.dim}/><br/>Finheist \u00b7 Intrinsic Value Engine<br/>Ceci n'est pas un conseil d'investissement.</div>
+    </div></div></div>;
 }
