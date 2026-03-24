@@ -1,10 +1,10 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 
 /* ═══════════════════════════════════════════
-   CONFIG
+   CONFIG — Finnhub.io
    ═══════════════════════════════════════════ */
-const API_KEY = "Lj2E0v3yMnVsHWeLnwdt9yuZtBGG3Rp7";
-const BASE = "https://financialmodelingprep.com/api/v3";
+const API_KEY = "d70v4chr01ql6rg0ov1gd70v4chr01ql6rg0ov20";
+const BASE = "https://finnhub.io/api/v1";
 
 /* ═══════════════════════════════════════════
    POPULAR TICKERS (suggestions rapides)
@@ -54,78 +54,80 @@ const ff = `'Outfit', 'Space Grotesk', system-ui, sans-serif`;
 const mono = `'JetBrains Mono', 'Fira Code', monospace`;
 
 /* ═══════════════════════════════════════════
-   API FUNCTIONS
+   API FUNCTIONS — Finnhub.io
    ═══════════════════════════════════════════ */
-async function fetchProfile(ticker) {
+async function apiFetch(url) {
   try {
-    const r = await fetch(`${BASE}/profile/${ticker}?apikey=${API_KEY}`);
+    const r = await fetch(url);
+    if (!r.ok) return null;
     const d = await r.json();
-    return d?.[0] || null;
-  } catch { return null; }
-}
-
-async function fetchKeyMetrics(ticker) {
-  try {
-    const r = await fetch(`${BASE}/key-metrics/${ticker}?limit=1&apikey=${API_KEY}`);
-    const d = await r.json();
-    return d?.[0] || null;
-  } catch { return null; }
-}
-
-async function fetchRatios(ticker) {
-  try {
-    const r = await fetch(`${BASE}/ratios/${ticker}?limit=1&apikey=${API_KEY}`);
-    const d = await r.json();
-    return d?.[0] || null;
+    if (d?.error) return null;
+    return d;
   } catch { return null; }
 }
 
 async function searchTickers(q) {
-  try {
-    const r = await fetch(`${BASE}/search?query=${q}&limit=8&apikey=${API_KEY}`);
-    return await r.json();
-  } catch { return []; }
+  const d = await apiFetch(`${BASE}/search?q=${q}&token=${API_KEY}`);
+  if (!d?.result) return [];
+  return d.result
+    .filter(r => r.type === "Common Stock" || r.type === "ADR" || r.type === "EQS")
+    .slice(0, 8)
+    .map(r => ({ symbol: r.symbol, name: r.description || "" }));
 }
 
 async function loadTickerData(ticker) {
-  const [profile, metrics, ratios] = await Promise.all([
-    fetchProfile(ticker),
-    fetchKeyMetrics(ticker),
-    fetchRatios(ticker),
+  // 3 parallel calls: quote, profile, basic financials (117 metrics)
+  const [quote, profile, financials] = await Promise.all([
+    apiFetch(`${BASE}/quote?symbol=${ticker}&token=${API_KEY}`),
+    apiFetch(`${BASE}/stock/profile2?symbol=${ticker}&token=${API_KEY}`),
+    apiFetch(`${BASE}/stock/metric?symbol=${ticker}&metric=all&token=${API_KEY}`),
   ]);
 
-  if (!profile) return null;
+  // Need at least quote with a price
+  const price = quote?.c || profile?.marketCapitalization && null;
+  if (!price || price === 0) return null;
 
-  const sharesOut = profile.mktCap && profile.price ? profile.mktCap / profile.price : null;
-  const fcfPS = metrics?.freeCashFlowPerShare ?? null;
-  const netDebtPS = metrics?.netDebtPerShare ?? null;
-  const roic = metrics?.roic ?? ratios?.returnOnCapitalEmployed ?? null;
-  const peRatio = ratios?.priceEarningsRatio ?? profile.pe ?? null;
-  const pbRatio = ratios?.priceToBookRatio ?? profile.pb ?? null;
-  const dividendYield = ratios?.dividendYield ?? null;
-  const revenuePS = metrics?.revenuePerShare ?? null;
-  const epsGrowth = metrics?.earningsYield ?? null;
+  const m = financials?.metric || {};
+  const mktCap = (profile?.marketCapitalization || 0) * 1e6; // Finnhub returns in millions
+  const sharesOut = profile?.shareOutstanding ? profile.shareOutstanding * 1e6 : null;
+
+  // FCF per share — Finnhub metric key: freeCashFlowPerShareTTM or freeCashFlowPerShareAnnual
+  let fcfPS = m.freeCashFlowPerShareTTM ?? m.freeCashFlowPerShareAnnual ?? null;
+
+  // Net debt per share — compute from metrics if available
+  // Finnhub provides: netDebtAnnual, currentDebt, totalDebt, cashAndShortTermInvestments
+  let netDebtPS = null;
+  if (m.netDebtAnnual != null && sharesOut) {
+    netDebtPS = (m.netDebtAnnual * 1e6) / sharesOut;
+  } else if (m.totalDebtToEquityAnnual != null && m.bookValuePerShareAnnual != null) {
+    // Rough approximation: netDebt ≈ totalDebt - cash, but use what's available
+    const longTermDebt = m.longTermDebtToEquityAnnual || 0;
+    const bvps = m.bookValuePerShareAnnual || 0;
+    if (m.currentRatioAnnual && bvps) {
+      netDebtPS = null; // better to leave null than give wrong number
+    }
+  }
 
   return {
     ticker: ticker.toUpperCase(),
-    name: profile.companyName || ticker,
-    currency: profile.currency || "USD",
-    price: profile.price,
-    sector: profile.sector || "—",
-    industry: profile.industry || "—",
-    country: profile.country || "—",
-    exchange: profile.exchangeShortName || "—",
-    marketCap: profile.mktCap,
+    name: profile?.name || ticker,
+    currency: profile?.currency || "USD",
+    price: quote?.c || null,
+    sector: profile?.finnhubIndustry || "—",
+    industry: profile?.finnhubIndustry || "—",
+    country: profile?.country || "—",
+    exchange: profile?.exchange || "—",
+    marketCap: mktCap || null,
     sharesOut,
     fcfPS,
     netDebtPS,
-    roic,
-    peRatio,
-    pbRatio,
-    dividendYield,
-    revenuePS,
-    description: profile.description || "",
-    image: profile.image || null,
+    roic: m.roiTTM != null ? m.roiTTM / 100 : null,
+    peRatio: m.peTTM ?? m.peAnnual ?? null,
+    pbRatio: m.pbAnnual ?? m.pbQuarterly ?? null,
+    dividendYield: m.dividendYieldIndicatedAnnual != null ? m.dividendYieldIndicatedAnnual / 100 : null,
+    revenuePS: m.revenuePerShareTTM ?? m.revenuePerShareAnnual ?? null,
+    description: profile?.name ? `${profile.name} — ${profile.finnhubIndustry || ""}, ${profile.country || ""}. IPO: ${profile.ipo || "—"}.` : "",
+    image: profile?.logo || null,
   };
 }
 
@@ -176,25 +178,18 @@ function computeDCF({ fcfPS, netDebtPS, wacc, g1, g2, tg, dilution, margin }) {
 function Star({ size = 24, color = C.accent }) {
   return (
     <svg width={size} height={size} viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-      {/* Ornate thin star — gothic/baroque style */}
-      <path d="M50 0 L51.5 38 Q52 42 55 44 L100 50 L55 56 Q52 58 51.5 62 L50 100 L48.5 62 Q48 58 45 56 L0 50 L45 44 Q48 42 48.5 38 Z" fill={color} opacity="0.9"/>
-      {/* Inner ornate detail */}
-      <path d="M50 12 L51 40 Q51.5 44 54 46 L88 50 L54 54 Q51.5 56 51 60 L50 88 L49 60 Q48.5 56 46 54 L12 50 L46 46 Q48.5 44 49 40 Z" fill={color} opacity="0.4"/>
-      {/* Central diamond */}
-      <path d="M50 38 L56 50 L50 62 L44 50 Z" fill={color} opacity="0.6"/>
-      {/* Decorative curves */}
-      <circle cx="50" cy="50" r="6" fill="none" stroke={color} strokeWidth="0.5" opacity="0.5"/>
-      <circle cx="50" cy="50" r="10" fill="none" stroke={color} strokeWidth="0.3" opacity="0.3"/>
-      {/* Fine spines */}
-      <line x1="50" y1="5" x2="50" y2="18" stroke={color} strokeWidth="0.4" opacity="0.5"/>
-      <line x1="50" y1="82" x2="50" y2="95" stroke={color} strokeWidth="0.4" opacity="0.5"/>
-      <line x1="5" y1="50" x2="18" y2="50" stroke={color} strokeWidth="0.4" opacity="0.5"/>
-      <line x1="82" y1="50" x2="95" y2="50" stroke={color} strokeWidth="0.4" opacity="0.5"/>
-      {/* Diagonal fine spines */}
-      <line x1="22" y1="22" x2="38" y2="38" stroke={color} strokeWidth="0.3" opacity="0.25"/>
-      <line x1="62" y1="62" x2="78" y2="78" stroke={color} strokeWidth="0.3" opacity="0.25"/>
-      <line x1="78" y1="22" x2="62" y2="38" stroke={color} strokeWidth="0.3" opacity="0.25"/>
-      <line x1="22" y1="78" x2="38" y2="62" stroke={color} strokeWidth="0.3" opacity="0.25"/>
+      {/* Ultra-fine 4-point star with ornate wisps */}
+      <path d="M50 0 Q50.8 44 52 48 Q56 49.2 100 50 Q56 50.8 52 52 Q50.8 56 50 100 Q49.2 56 48 52 Q44 50.8 0 50 Q44 49.2 48 48 Q49.2 44 50 0Z" fill={color} opacity="0.85"/>
+      {/* Inner glow */}
+      <path d="M50 15 Q50.4 46 51 49 Q54 49.6 85 50 Q54 50.4 51 51 Q50.4 54 50 85 Q49.6 54 49 51 Q46 50.4 15 50 Q46 49.6 49 49 Q49.6 46 50 15Z" fill={color} opacity="0.3"/>
+      {/* Diagonal fine wisps */}
+      <line x1="26" y1="26" x2="42" y2="42" stroke={color} strokeWidth="0.5" opacity="0.35"/>
+      <line x1="58" y1="58" x2="74" y2="74" stroke={color} strokeWidth="0.5" opacity="0.35"/>
+      <line x1="74" y1="26" x2="58" y2="42" stroke={color} strokeWidth="0.5" opacity="0.35"/>
+      <line x1="26" y1="74" x2="42" y2="58" stroke={color} strokeWidth="0.5" opacity="0.35"/>
+      {/* Micro center */}
+      <circle cx="50" cy="50" r="2.5" fill={color} opacity="0.7"/>
+      <circle cx="50" cy="50" r="5" fill="none" stroke={color} strokeWidth="0.3" opacity="0.25"/>
     </svg>
   );
 }
@@ -422,8 +417,24 @@ export default function DCFApp() {
       setNetDebtPS(result.netDebtPS != null ? String(Number(result.netDebtPS).toFixed(2)) : "");
       setResults(null);
       setPage(PAGE.ANALYSIS);
+      // Warn if some data is missing
+      if (result.fcfPS == null || result.netDebtPS == null) {
+        setError("Certaines données manquent — complétez manuellement les champs vides.");
+      }
     } else {
-      setError("Ticker introuvable ou API indisponible. Vérifiez le symbole.");
+      // Fallback: open analysis page in full manual mode
+      setData({
+        ticker: tk, name: tk, currency: "USD", price: null,
+        sector: "—", industry: "—", country: "—", exchange: "—",
+        marketCap: null, sharesOut: null, fcfPS: null, netDebtPS: null,
+        roic: null, peRatio: null, pbRatio: null, dividendYield: null,
+        revenuePS: null, description: "", image: null,
+      });
+      setCurrency("USD");
+      setPrice(""); setFcfPS(""); setNetDebtPS("");
+      setResults(null);
+      setPage(PAGE.ANALYSIS);
+      setError("API indisponible pour ce ticker — renseignez les données manuellement.");
     }
     setLoading(false);
   }, [query]);
@@ -630,7 +641,7 @@ export default function DCFApp() {
               {/* Features */}
               <div style={{ display:"flex", gap:14, flexWrap:"wrap", animation:"slideUp 0.6s ease-out 0.3s both" }}>
                 {[
-                  { icon:"⚡", title:"Données Live", desc:"API Financial Modeling Prep — prix, FCF, dette nette en temps réel" },
+                  { icon:"⚡", title:"Données Live", desc:"API Finnhub.io — prix, FCF/share, ratios financiers en temps réel" },
                   { icon:"📊", title:"Tout Per Share", desc:"FCF/action, dette nette/action — pas de shares outstanding à chercher" },
                   { icon:"🛡", title:"Marge de Sécurité", desc:"Ajustez dilution, rachat d'actions et marge de sécurité" },
                 ].map((f,i) => (
@@ -922,7 +933,7 @@ export default function DCFApp() {
           {/* Footer */}
           <div style={{ textAlign:"center",marginTop:40,fontSize:10,color:C.dim,lineHeight:1.7 }}>
             <Star size={14} color={C.dim} /><br/>
-            DCF Valuation · Données live Financial Modeling Prep · Toutes métriques per share<br/>
+            DCF Valuation · Données live Finnhub.io · Toutes métriques per share<br/>
             Ceci n'est pas un conseil d'investissement.
           </div>
         </div>
