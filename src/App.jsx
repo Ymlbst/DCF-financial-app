@@ -518,7 +518,7 @@ export default function DCFApp() {
           )}
         </div>
 
-        <div style={{ maxWidth:820, margin:"0 auto", padding:"28px 18px 80px" }}>
+        <div style={{ maxWidth:700, margin:"0 auto", padding:"28px 20px 80px" }}>
 
           {/* ═══════════════════════════════════════
               PAGE: HOME
@@ -526,23 +526,22 @@ export default function DCFApp() {
           {page === PAGE.HOME && (
             <div style={{ animation:"fadeIn 0.6s ease-out" }}>
               {/* Hero */}
-              <div style={{ textAlign:"center", padding:"60px 0 40px" }}>
-                <div style={{ display:"inline-flex", marginBottom:20 }}>
+              <div style={{ textAlign:"center", padding:"80px 0 50px" }}>
+                <div style={{ display:"inline-flex", marginBottom:24 }}>
                   <div style={{
-                    width:72, height:72, borderRadius:20,
+                    width:64, height:64, borderRadius:18,
                     background:`linear-gradient(135deg,${C.accent},#7c3aed)`,
                     display:"flex", alignItems:"center", justifyContent:"center",
                     boxShadow:`0 8px 40px ${C.accentGlow}`,
                   }}>
-                    <Star size={42} color="#05030e" />
+                    <Star size={38} color="#05030e" />
                   </div>
                 </div>
-                <h1 style={{ fontSize:36, fontWeight:700, letterSpacing:"-0.04em", margin:0, lineHeight:1.1 }}>
+                <h1 style={{ fontSize:32, fontWeight:700, letterSpacing:"-0.04em", margin:0, lineHeight:1.1 }}>
                   DCF <span style={{ color:C.accent }}>Valuation</span>
                 </h1>
-                <p style={{ color:C.mid, fontSize:15, marginTop:10, maxWidth:460, marginLeft:"auto", marginRight:"auto", lineHeight:1.5 }}>
-                  Analyse la valeur intrinsèque de n'importe quelle action cotée. 
-                  Données financières en temps réel, calcul DCF complet, toutes métriques per share.
+                <p style={{ color:C.dim, fontSize:14, marginTop:10, maxWidth:400, marginLeft:"auto", marginRight:"auto", lineHeight:1.6 }}>
+                  Valeur intrinsèque per share · Données temps réel · Calcul DCF complet
                 </p>
               </div>
 
@@ -614,41 +613,40 @@ export default function DCFApp() {
                 </div>
               </Card>
 
-              {/* Popular tickers grid */}
+              {/* Popular tickers — compact */}
               <Card anim delay="0.2s">
-                <div style={{ fontSize:11,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.1em",marginBottom:14 }}>
-                  Tickers populaires · {POPULAR.length} valeurs
+                <div style={{ fontSize:10,fontWeight:600,color:C.dim,textTransform:"uppercase",letterSpacing:"0.12em",marginBottom:12 }}>
+                  Accès rapide
                 </div>
                 <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
-                  {POPULAR.slice(0, 60).map(t => (
+                  {POPULAR.slice(0, 20).map(t => (
                     <button key={t} onClick={() => handleLoad(t)}
                       style={{
                         background:C.input, border:`1px solid ${C.inputBorder}`,
-                        borderRadius:8, padding:"6px 12px", cursor:"pointer",
-                        color:C.mid, fontSize:11, fontFamily:mono, fontWeight:600,
+                        borderRadius:8, padding:"7px 14px", cursor:"pointer",
+                        color:C.mid, fontSize:12, fontFamily:mono, fontWeight:600,
                         transition:"all 0.2s",
                       }}
-                      onMouseOver={e => { e.target.style.borderColor = C.accent; e.target.style.color = C.accent; }}
-                      onMouseOut={e => { e.target.style.borderColor = C.inputBorder; e.target.style.color = C.mid; }}
+                      onMouseOver={e => { e.target.style.borderColor = C.accent; e.target.style.color = C.accent; e.target.style.background = C.accentDim; }}
+                      onMouseOut={e => { e.target.style.borderColor = C.inputBorder; e.target.style.color = C.mid; e.target.style.background = C.input; }}
                     >{t}</button>
                   ))}
-                  <span style={{ fontSize:10, color:C.dim, alignSelf:"center", marginLeft:6 }}>
-                    +{POPULAR.length - 60} autres... ou tapez n'importe quel ticker
-                  </span>
+                </div>
+                <div style={{ fontSize:10, color:C.dim, marginTop:10 }}>
+                  {POPULAR.length}+ tickers en suggestion · recherche illimitée via Finnhub
                 </div>
               </Card>
 
-              {/* Features */}
-              <div style={{ display:"flex", gap:14, flexWrap:"wrap", animation:"slideUp 0.6s ease-out 0.3s both" }}>
+              {/* Minimal feature line */}
+              <div style={{ display:"flex", justifyContent:"center", gap:28, padding:"20px 0 0", animation:"slideUp 0.6s ease-out 0.3s both" }}>
                 {[
-                  { icon:"⚡", title:"Données Live", desc:"API Finnhub.io — prix, FCF/share, ratios financiers en temps réel" },
-                  { icon:"📊", title:"Tout Per Share", desc:"FCF/action, dette nette/action — pas de shares outstanding à chercher" },
-                  { icon:"🛡", title:"Marge de Sécurité", desc:"Ajustez dilution, rachat d'actions et marge de sécurité" },
+                  { icon:"⚡", label:"Live Data" },
+                  { icon:"📊", label:"Per Share" },
+                  { icon:"🛡", label:"Marge de sécurité" },
                 ].map((f,i) => (
-                  <div key={i} style={{ flex:1, minWidth:200, background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:"20px 18px", backdropFilter:"blur(20px)" }}>
-                    <div style={{ fontSize:28, marginBottom:8 }}>{f.icon}</div>
-                    <div style={{ fontSize:14, fontWeight:700, marginBottom:4 }}>{f.title}</div>
-                    <div style={{ fontSize:12, color:C.dim, lineHeight:1.5 }}>{f.desc}</div>
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:6, fontSize:12, color:C.dim }}>
+                    <span style={{ fontSize:16 }}>{f.icon}</span>
+                    <span style={{ fontWeight:600 }}>{f.label}</span>
                   </div>
                 ))}
               </div>
